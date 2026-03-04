@@ -107,3 +107,58 @@ total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"可训练参数量: {total_params:,}")
 
 #4.训练循环
+print("\n" + "=" * 50)
+print("Step 4 — 训练")
+print("=" * 50)
+
+NUM_EPOCHS = 30
+train_losses = []
+
+for epoch in range(1, NUM_EPOCHS + 1):
+    # ── Train ──
+    model.train()
+    epoch_loss = 0.0
+    for X_batch, y_batch in train_loader:
+        optimizer.zero_grad()           # 清零梯度
+        logits = model(X_batch)
+        loss   = criterion(logits, y_batch)
+        loss.backward()                 # 反向传播
+        optimizer.step()               # 参数更新
+        epoch_loss += loss.item() * len(X_batch)
+
+    avg_train_loss = epoch_loss / len(train_ds)
+    train_losses.append(avg_train_loss)
+
+    # ── Validation ──
+    model.eval()
+    correct = total = 0
+    with torch.no_grad():
+        for X_batch, y_batch in val_loader:
+            logits = model(X_batch)
+            preds  = logits.argmax(dim=1)
+            correct += (preds == y_batch).sum().item()
+            total   += len(y_batch)
+    val_acc = correct / total
+
+    print(f"Epoch [{epoch:02d}/{NUM_EPOCHS}]  "
+          f"Train Loss: {avg_train_loss:.4f}  |  "
+          f"Val Acc: {val_acc*100:.2f}%")
+
+#5.测试评估
+print("\n" + "=" * 50)
+print("Step 5 — 测试集评估")
+print("=" * 50)
+
+def evaluate(loader, mdl):
+    mdl.eval()
+    correct = total = 0
+    with torch.no_grad():
+        for X_batch, y_batch in loader:
+            preds   = mdl(X_batch).argmax(dim=1)
+            correct += (preds == y_batch).sum().item()
+            total   += len(y_batch)
+    return correct / total
+
+test_acc = evaluate(test_loader, model)
+print(f"Test Accuracy: {test_acc*100:.2f}%")
+
