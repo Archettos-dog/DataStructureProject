@@ -162,3 +162,39 @@ def evaluate(loader, mdl):
 test_acc = evaluate(test_loader, model)
 print(f"Test Accuracy: {test_acc*100:.2f}%")
 
+#6.保存&加载模型
+print("\n" + "=" * 50)
+print("Step 6 — 保存 & 加载模型")
+print("=" * 50)
+
+MODEL_PATH = "mlp_digits.pth"
+torch.save(model.state_dict(), MODEL_PATH)
+print(f"模型已保存至: {MODEL_PATH}")
+
+# 新建同结构模型，加载权重
+model_loaded = MLP()
+model_loaded.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
+print("权重加载成功，重新评估 Test Accuracy ...")
+test_acc_loaded = evaluate(test_loader, model_loaded)
+print(f"加载后 Test Accuracy: {test_acc_loaded*100:.2f}%")
+
+#7.画训练损失曲线
+print("\n" + "=" * 50)
+print("Step 7 — 绘制 Train Loss 曲线")
+print("=" * 50)
+
+PLOT_PATH = "train_loss_curve.png"
+
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.plot(range(1, NUM_EPOCHS + 1), train_losses,
+        marker="o", markersize=4, linewidth=2, color="#4C72B0", label="Train Loss")
+ax.set_xlabel("Epoch", fontsize=13)
+ax.set_ylabel("Average Cross-Entropy Loss", fontsize=13)
+ax.set_title("MLP Training Loss on Digits Dataset", fontsize=15)
+ax.legend(fontsize=12)
+ax.grid(True, linestyle="--", alpha=0.5)
+fig.tight_layout()
+fig.savefig(PLOT_PATH, dpi=150)
+plt.close(fig)
+print(f"Loss 曲线已保存至: {PLOT_PATH}")
+print("\n实验完成")
