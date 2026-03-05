@@ -95,3 +95,70 @@ def compute_gradients(X, y_true, y_pred):
     dw = (X.T @ error) / n           # (d,)
     db = error.mean()                # scalar
     return dw, db
+
+#6.训练循环（梯度下降）
+# ── 超参数 ──────────────────────────────────
+learning_rate = 0.1
+n_epochs      = 500
+print_every   = 50 
+
+# ── 参数初始化 ───────────────────────────────
+n_features = X_train.shape[1]
+np.random.seed(42)
+w = np.zeros(n_features)   
+b = 0.0
+
+loss_history = []
+
+print("=" * 55)
+print(f"{'Epoch':>8}  {'Train Loss':>12}  {'Val Loss':>10}")
+print("=" * 55)
+
+for epoch in range(1, n_epochs + 1):
+    # 前向传播
+    p_train = predict_proba(X_train, w, b)
+
+    # 计算损失
+    train_loss = binary_cross_entropy(y_train, p_train)
+    loss_history.append(train_loss)
+
+    # 梯度下降
+    dw, db = compute_gradients(X_train, y_train, p_train)
+    w -= learning_rate * dw
+    b -= learning_rate * db
+
+    # 验证损失（在测试集上，仅用于监控，不参与训练）
+    if epoch % print_every == 0 or epoch == 1:
+        p_val  = predict_proba(X_test, w, b)
+        val_loss = binary_cross_entropy(y_test, p_val)
+        print(f"{epoch:>8}  {train_loss:>12.6f}  {val_loss:>10.6f}")
+
+print("=" * 55)
+
+# ─────────────────────────────────────────────
+# 7. 测试集指标
+# ─────────────────────────────────────────────
+p_test  = predict_proba(X_test, w, b)
+y_pred  = (p_test >= 0.5).astype(int)
+
+accuracy  = (y_pred == y_test).mean()
+
+# 手动计算 precision / recall / F1
+TP = ((y_pred == 1) & (y_test == 1)).sum()
+TN = ((y_pred == 0) & (y_test == 0)).sum()
+FP = ((y_pred == 1) & (y_test == 0)).sum()
+FN = ((y_pred == 0) & (y_test == 1)).sum()
+
+precision = TP / (TP + FP + 1e-15)
+recall    = TP / (TP + FN + 1e-15)
+f1        = 2 * precision * recall / (precision + recall + 1e-15)
+
+print(f"\n[测试集结果]")
+print(f"  Accuracy  : {accuracy:.4f}  ({int(accuracy*len(y_test))}/{len(y_test)})")
+print(f"  Precision : {precision:.4f}")
+print(f"  Recall    : {recall:.4f}")
+print(f"  F1 Score  : {f1:.4f}")
+print(f"\n  混淆矩阵:")
+print(f"              预测0   预测1")
+print(f"  真实0     {TN:>5}   {FP:>5}")
+print(f"  真实1     {FN:>5}   {TP:>5}")
