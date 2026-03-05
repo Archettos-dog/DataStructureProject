@@ -21,3 +21,35 @@ X_train = scaler.fit_transform(X_train)
 X_test  = scaler.transform(X_test)
 
 print(f"[划分] 训练集:{X_train.shape}  测试集:{X_test.shape}\n")
+
+#2.sigmoid函数
+def sigmoid(z):
+    """
+    σ(z) = 1 / (1 + e^{-z})
+    数值稳定写法：对正负值分别处理，避免 overflow
+    """
+    return np.where(
+        z >= 0,
+        1.0 / (1.0 + np.exp(-z)),
+        np.exp(z) / (1.0 + np.exp(z))
+    )
+
+print(f"[验证] sigmoid(0) = {sigmoid(0)}")          # 期望输出 0.5
+print(f"[验证] sigmoid(+∞)≈{sigmoid(1e9):.6f}")
+print(f"[验证] sigmoid(-∞)≈{sigmoid(-1e9):.6f}\n")
+
+#3.预测概率p = σ(Xw + b)
+def predict_proba(X, w, b):
+    """
+    参数
+    ----
+    X : (n, d)  特征矩阵
+    w : (d,)    权重向量
+    b : float   偏置
+
+    返回
+    ----
+    p : (n,)    每个样本属于正类的概率
+    """
+    z = X @ w + b          # 线性组合  (n,)
+    return sigmoid(z)      # 映射到 (0,1)
