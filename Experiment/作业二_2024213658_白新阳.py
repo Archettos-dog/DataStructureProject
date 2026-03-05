@@ -53,3 +53,45 @@ def predict_proba(X, w, b):
     """
     z = X @ w + b          # 线性组合  (n,)
     return sigmoid(z)      # 映射到 (0,1)
+
+#4.二元交叉熵损失（Log Loss）
+def binary_cross_entropy(y_true, y_pred, eps=1e-15):
+    """
+    L = -1/n * Σ [y·log(p) + (1-y)·log(1-p)]
+
+    参数
+    ----
+    y_true : (n,)  真实标签 {0,1}
+    y_pred : (n,)  预测概率  ∈(0,1)
+    eps    : float 防止 log(0) 的数值截断
+
+    返回
+    ----
+    loss : float  标量损失值
+    """
+    p = np.clip(y_pred, eps, 1 - eps)
+    loss = -np.mean(y_true * np.log(p) + (1 - y_true) * np.log(1 - p))
+    return loss
+
+# 5. 梯度计算
+def compute_gradients(X, y_true, y_pred):
+    """
+    ∂L/∂w = 1/n · Xᵀ(p - y)
+    ∂L/∂b = 1/n · Σ(p - y)
+
+    参数
+    ----
+    X      : (n, d)
+    y_true : (n,)
+    y_pred : (n,)  p = σ(Xw+b)
+
+    返回
+    ----
+    dw : (d,)
+    db : float
+    """
+    n = X.shape[0]
+    error = y_pred - y_true          # (n,)  残差
+    dw = (X.T @ error) / n           # (d,)
+    db = error.mean()                # scalar
+    return dw, db
