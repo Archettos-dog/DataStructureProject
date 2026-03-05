@@ -162,3 +162,18 @@ print(f"\n  混淆矩阵:")
 print(f"              预测0   预测1")
 print(f"  真实0     {TN:>5}   {FP:>5}")
 print(f"  真实1     {FN:>5}   {TP:>5}")
+
+#8.绘制损失曲线
+plt.figure(figsize=(9, 5))
+plt.plot(range(1, n_epochs + 1), loss_history,
+         color="#2563EB", linewidth=1.8, label="Train Loss")
+plt.xlabel("Epoch", fontsize=13)
+plt.ylabel("Binary Cross-Entropy Loss", fontsize=13)
+plt.title("Logistic Regression Training Loss Curve\n(Breast Cancer Dataset, from scratch)",
+          fontsize=14, fontweight="bold")
+plt.legend(fontsize=12)
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig("loss_curve.png", dpi=150)
+plt.show()
+print("\n[图表] Loss 曲线已保存至 loss_curve.png")
