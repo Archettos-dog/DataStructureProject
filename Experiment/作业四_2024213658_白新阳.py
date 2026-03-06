@@ -47,3 +47,35 @@ def one_hot(y, C):
     oh[np.arange(N), y] = 1.0
     return oh
 
+#3.Dropout层（Inverted Dropout）
+class DropoutLayer:
+    """
+    Inverted Dropout:
+      - 训练时：以概率 p 随机置零，并除以 (1-p) 保持期望不变
+      - 测试时：直接透传，无需任何缩放
+    """
+    def __init__(self, p=0.5):
+        assert 0.0 <= p < 1.0, "丢弃概率 p 须在 [0, 1) 内"
+        self.p = p          # 丢弃概率
+        self.mask = None
+        self.training = True
+
+    def train_mode(self):
+        self.training = True
+
+    def eval_mode(self):
+        self.training = False
+
+    def forward(self, x):
+        if self.training and self.p > 0:
+            # 生成 Bernoulli 掩码，保留概率为 (1-p)
+            self.mask = (np.random.rand(*x.shape) > self.p).astype(float)
+            return x * self.mask / (1.0 - self.p)   # 缩放保持期望
+        else:
+            self.mask = None
+            return x   # eval 模式：直接返回
+
+    def backward(self, dout):
+        if self.training and self.p > 0:
+            return dout * self.mask / (1.0 - self.p)
+        return dout
