@@ -90,3 +90,36 @@ def my_conv2d(img: np.ndarray, kernel: np.ndarray,
 
     return out
 
+#3.Max Pooling（纯 NumPy 实现）
+def my_maxpool2d(img: np.ndarray,
+                 kernel_size: int = 2,
+                 stride: int = 2) -> np.ndarray:
+    """
+    2D 最大池化（无 padding，无权重）
+
+    参数
+    ----
+    img         : (H, W) 输入图
+    kernel_size : 池化窗口大小 K
+    stride      : 步长 S
+
+    返回
+    ----
+    out         : (H_out, W_out) 池化结果
+    """
+    H, W = img.shape
+    K = kernel_size
+    S = stride
+
+    # 输出尺寸（与卷积公式相同，P=0）
+    H_out = (H - K) // S + 1
+    W_out = (W - K) // S + 1
+
+    out = np.zeros((H_out, W_out), dtype=np.float32)
+    for i in range(H_out):
+        for j in range(W_out):
+            region = img[i * S : i * S + K,
+                         j * S : j * S + K]
+            out[i, j] = np.max(region)                 # 取最大值
+
+    return out
