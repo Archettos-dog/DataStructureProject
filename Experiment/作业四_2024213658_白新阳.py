@@ -144,3 +144,22 @@ class MLP:
 
     def params(self):
         return dict(W1=self.W1, b1=self.b1, W2=self.W2, b2=self.b2)
+
+#5.Momentum SGD 优化器
+class MomentumSGD:
+    """
+    更新规则：
+        v_t = γ * v_{t-1} + η * ∇L
+        θ   = θ - v_t
+    当 γ=0 时退化为普通 SGD。
+    """
+    def __init__(self, params: dict, lr=0.05, momentum=0.9):
+        self.lr = lr
+        self.momentum = momentum
+        # 速度变量初始化为 0，形状与参数一致
+        self.velocity = {k: np.zeros_like(v) for k, v in params.items()}
+
+    def step(self, params: dict, grads: dict):
+        for k in params:
+            self.velocity[k] = self.momentum * self.velocity[k] + self.lr * grads[k]
+            params[k] -= self.velocity[k]
