@@ -82,3 +82,16 @@ def cross_entropy_loss(P, y):
     loss = -np.mean(np.log(correct_probs + 1e-12))
     return loss
 
+#4.前向传播
+def forward(Xb, W1, b1, W2, b2):
+    """
+    前向传播
+    Xb: (B, D)
+    返回: P (B, C), cache (用于反向传播)
+    """
+    Z1 = Xb @ W1 + b1          # (B, H)
+    A1 = relu(Z1)               # (B, H)
+    Z2 = A1 @ W2 + b2          # (B, C)
+    P  = softmax(Z2)            # (B, C)
+    cache = (Xb, Z1, A1, Z2, P)
+    return P, cache
