@@ -163,3 +163,46 @@ class MomentumSGD:
         for k in params:
             self.velocity[k] = self.momentum * self.velocity[k] + self.lr * grads[k]
             params[k] -= self.velocity[k]
+
+#6.训练函数
+def train(model, optimizer, X_tr, y_tr, X_v, y_v,
+          epochs=100, batch_size=64, seed=42):
+    rng = np.random.RandomState(seed)
+    train_losses = []
+    val_accs     = []
+
+    for epoch in range(1, epochs + 1):
+        # ── 打乱数据 ──
+        idx = rng.permutation(len(y_tr))
+        X_sh, y_sh = X_tr[idx], y_tr[idx]
+
+        # ── Mini-batch 训练 ──
+        model.train_mode()
+        epoch_loss = 0.0
+        n_batches  = 0
+
+        for start in range(0, len(y_sh), batch_size):
+            Xb = X_sh[start: start + batch_size]
+            yb = y_sh[start: start + batch_size]
+
+            probs = model.forward(Xb)
+            loss  = cross_entropy_loss(probs, yb)
+            grads = model.backward(yb)
+            optimizer.step(model.params(), grads)
+
+            epoch_loss += loss
+            n_batches  += 1
+
+        # ── 验证 ──
+        model.eval_mode()
+        val_probs = model.forward(X_v)
+        val_acc   = accuracy(val_probs, y_v)
+
+        train_losses.append(epoch_loss / n_batches)
+        val_accs.append(val_acc)
+
+        if epoch % 10 == 0:
+            print(f"  Epoch {epoch:3d} | Loss={train_losses[-1]:.4f} | Val Acc={val_acc:.4f}")
+
+    return train_losses, val_accs
+
