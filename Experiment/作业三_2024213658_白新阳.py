@@ -95,3 +95,60 @@ def forward(Xb, W1, b1, W2, b2):
     P  = softmax(Z2)            # (B, C)
     cache = (Xb, Z1, A1, Z2, P)
     return P, cache
+
+#5.反向传播
+def backward(cache, y, W2):
+    """
+    手写反向传播
+    cache: (Xb, Z1, A1, Z2, P)
+    y:     (B,) 整数标签
+    返回: dW1, db1, dW2, db2
+    """
+    Xb, Z1, A1, Z2, P = cache
+    B = Xb.shape[0]
+
+    # ── 输出层梯度 ──────────────────────────────
+    # dL/dZ2: softmax + cross-entropy 组合求导
+    # dL/dZ2[i,j] = P[i,j] - 1(j==y[i])
+    dZ2 = P.copy()                             # (B, C)
+    dZ2[np.arange(B), y] -= 1
+    dZ2 /= B
+
+    # dL/dW2 = A1^T @ dZ2
+    dW2 = A1.T @ dZ2                           # (H, C)
+    # dL/db2 = sum over batch
+    db2 = np.sum(dZ2, axis=0)                  # (C,)
+
+    # ── 隐藏层梯度 ─────────────────────────────
+    # 反传到 A1
+    dA1 = dZ2 @ W2.T                           # (B, H)
+    # 经过 ReLU 反传
+    dZ1 = dA1 * relu_grad(Z1)                  # (B, H)
+
+    # dL/dW1 = Xb^T @ dZ1
+    dW1 = Xb.T @ dZ1                           # (D, H)
+    # dL/db1 = sum over batch
+    db1 = np.sum(dZ1, axis=0)                  # (H,)
+
+    return dW1, db1, dW2, db2
+
+# 验证梯度 shape（用一个小 batch 测试）
+print("\n" + "=" * 60)
+print("3. 验证前向 & 反向传播 shape")
+print("=" * 60)
+_Xb = X_train[:8]
+_yb = y_train[:8]
+_P, _cache = forward(_Xb, W1, b1, W2, b2)
+print(f"输入 Xb.shape      = {_Xb.shape}")
+print(f"Z1.shape           = {_cache[1].shape}")
+print(f"A1.shape           = {_cache[2].shape}")
+print(f"Z2.shape           = {_cache[3].shape}")
+print(f"P (softmax).shape  = {_P.shape}")
+print(f"loss               = {cross_entropy_loss(_P, _yb):.4f}")
+
+_dW1, _db1, _dW2, _db2 = backward(_cache, _yb, W2)
+print(f"\ndW1.shape = {_dW1.shape}")
+print(f"db1.shape = {_db1.shape}")
+print(f"dW2.shape = {_dW2.shape}")
+print(f"db2.shape = {_db2.shape}")
+
