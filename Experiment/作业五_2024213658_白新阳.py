@@ -189,7 +189,7 @@ def main():
     axes[3].axis('off')
 
     plt.tight_layout()
-    out_path = "/mnt/user-data/outputs/conv2d_result.png"
+    out_path = "conv2d_result.png"
     plt.savefig(out_path, dpi=150, bbox_inches='tight')
     print(f"  结果已保存至 {out_path}")
 
