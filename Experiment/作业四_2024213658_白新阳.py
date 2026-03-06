@@ -231,3 +231,42 @@ loss_B, acc_B = train(model_B, optim_B,
                       X_train, y_train, X_val, y_val,
                       epochs=EPOCHS, batch_size=BATCH_SIZE)
 
+#8.精度汇报
+print()
+print("=" * 50)
+print("最终验证集精度")
+print(f"  模型 A (SGD,   no Dropout)  : {acc_A[-1]:.4f}")
+print(f"  模型 B (Momentum, Dropout)  : {acc_B[-1]:.4f}")
+print("=" * 50)
+
+# 9. 绘图
+epochs_range = np.arange(1, EPOCHS + 1)
+
+fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+fig.suptitle("MLP with Inverted Dropout & Momentum SGD — Experiment", fontsize=14, fontweight='bold')
+
+# ── 左图：Train Loss ──
+ax1 = axes[0]
+ax1.plot(epochs_range, loss_A, label='Model A  (SGD, no Dropout)',      color='steelblue',  linewidth=2)
+ax1.plot(epochs_range, loss_B, label='Model B  (Momentum, Dropout=0.5)', color='darkorange', linewidth=2)
+ax1.set_xlabel("Epoch", fontsize=12)
+ax1.set_ylabel("Train Loss (Cross-Entropy)", fontsize=12)
+ax1.set_title("Train Loss vs Epoch", fontsize=13)
+ax1.legend(fontsize=10)
+ax1.grid(True, linestyle='--', alpha=0.6)
+
+# ── 右图：Validation Accuracy ──
+ax2 = axes[1]
+ax2.plot(epochs_range, acc_A, label='Model A  (SGD, no Dropout)',      color='steelblue',  linewidth=2)
+ax2.plot(epochs_range, acc_B, label='Model B  (Momentum, Dropout=0.5)', color='darkorange', linewidth=2)
+ax2.set_xlabel("Epoch", fontsize=12)
+ax2.set_ylabel("Validation Accuracy", fontsize=12)
+ax2.set_title("Validation Accuracy vs Epoch", fontsize=13)
+ax2.legend(fontsize=10)
+ax2.grid(True, linestyle='--', alpha=0.6)
+ax2.set_ylim(0, 1.05)
+
+plt.tight_layout()
+plt.savefig("dropout_momentum_experiment.png", dpi=150, bbox_inches='tight')
+print("\n图像已保存至 dropout_momentum_experiment.png")
+plt.show()
