@@ -152,3 +152,80 @@ print(f"db1.shape = {_db1.shape}")
 print(f"dW2.shape = {_dW2.shape}")
 print(f"db2.shape = {_db2.shape}")
 
+#6.完整训练
+print("\n" + "=" * 60)
+print("4. 开始训练")
+print("=" * 60)
+
+# 超参数
+lr         = 0.05
+epochs     = 200
+batch_size = 64
+
+# 重新初始化参数
+np.random.seed(42)
+W1 = np.random.randn(D, H) * 0.01
+b1 = np.zeros(H)
+W2 = np.random.randn(H, C) * 0.01
+b2 = np.zeros(C)
+
+def predict(X, W1, b1, W2, b2):
+    P, _ = forward(X, W1, b1, W2, b2)
+    return np.argmax(P, axis=1)
+
+def accuracy(X, y, W1, b1, W2, b2):
+    preds = predict(X, W1, b1, W2, b2)
+    return np.mean(preds == y)
+
+train_losses = []
+val_losses   = []
+train_accs   = []
+val_accs     = []
+
+N_train = X_train.shape[0]
+
+for epoch in range(1, epochs + 1):
+    # shuffle
+    idx = np.random.permutation(N_train)
+    X_shuf, y_shuf = X_train[idx], y_train[idx]
+
+    epoch_loss = 0.0
+    n_batches  = 0
+
+    for start in range(0, N_train, batch_size):
+        Xb = X_shuf[start : start + batch_size]
+        yb = y_shuf[start : start + batch_size]
+
+        # 前向
+        P, cache = forward(Xb, W1, b1, W2, b2)
+        loss = cross_entropy_loss(P, yb)
+        epoch_loss += loss
+        n_batches  += 1
+
+        # 反向
+        dW1, db1_, dW2, db2_ = backward(cache, yb, W2)
+
+        # 参数更新
+        W1 -= lr * dW1
+        b1 -= lr * db1_
+        W2 -= lr * dW2
+        b2 -= lr * db2_
+
+    # ── 记录指标 ──────────────────────────────
+    avg_loss = epoch_loss / n_batches
+    train_losses.append(avg_loss)
+
+    # val loss
+    P_val, _ = forward(X_val, W1, b1, W2, b2)
+    v_loss = cross_entropy_loss(P_val, y_val)
+    val_losses.append(v_loss)
+
+    t_acc = accuracy(X_train, y_train, W1, b1, W2, b2)
+    v_acc = accuracy(X_val,   y_val,   W1, b1, W2, b2)
+    train_accs.append(t_acc)
+    val_accs.append(v_acc)
+
+    if epoch % 20 == 0 or epoch == 1:
+        print(f"Epoch {epoch:>3d}/{epochs} | "
+              f"Train Loss: {avg_loss:.4f} | Val Loss: {v_loss:.4f} | "
+              f"Train Acc: {t_acc:.4f} | Val Acc: {v_acc:.4f}")
