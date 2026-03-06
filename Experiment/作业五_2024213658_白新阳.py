@@ -123,3 +123,88 @@ def my_maxpool2d(img: np.ndarray,
             out[i, j] = np.max(region)                 # 取最大值
 
     return out
+
+#4.主实验
+def main():
+    print("=" * 50)
+    print("手写卷积算子实验")
+    print("=" * 50)
+
+    # 4-1. 加载图像
+    print("\n[Step 1] 加载并预处理图像")
+    img = load_image(target_size=(128, 128))
+
+    # 4-2. 定义 Sobel 核
+    print("\n[Step 2] 定义 Sobel 卷积核")
+    sobel_x = np.array([[-1,  0,  1],
+                         [-2,  0,  2],
+                         [-1,  0,  1]], dtype=np.float32)   # 检测垂直边缘
+
+    sobel_y = np.array([[-1, -2, -1],
+                         [ 0,  0,  0],
+                         [ 1,  2,  1]], dtype=np.float32)   # 检测水平边缘
+
+    print(f"  Sobel X (垂直边缘检测):\n{sobel_x}")
+    print(f"  Sobel Y (水平边缘检测):\n{sobel_y}")
+
+    # 4-3. 调用 my_conv2d（padding=1 保持尺寸）
+    print("\n[Step 3] 执行卷积（stride=1, padding=1）")
+    H, W = img.shape
+    P, S, K = 1, 1, 3
+    H_out_expected = int(np.floor((H + 2*P - K) / S)) + 1
+    W_out_expected = int(np.floor((W + 2*P - K) / S)) + 1
+    print(f"  输入: ({H}, {W})  核: ({K},{K})  P={P}  S={S}")
+    print(f"  预期输出尺寸: H_out=({H}+2×{P}-{K})/{S}+1={H_out_expected}, "
+          f"W_out={W_out_expected}")
+
+    feat_x = my_conv2d(img, sobel_x, stride=S, padding=P)
+    feat_y = my_conv2d(img, sobel_y, stride=S, padding=P)
+    print(f"  Sobel X 特征图尺寸: {feat_x.shape}  ✓")
+    print(f"  Sobel Y 特征图尺寸: {feat_y.shape}  ✓")
+
+    # 4-4. Max Pooling
+    print("\n[Step 4] 执行 Max Pooling（kernel=2, stride=2）")
+    pooled = my_maxpool2d(img, kernel_size=2, stride=2)
+    print(f"  输入尺寸: {img.shape} → 池化后: {pooled.shape}  ✓")
+
+    # 4-5. 可视化
+    print("\n[Step 5] 绘制结果图")
+    fig, axes = plt.subplots(1, 4, figsize=(16, 4))
+    fig.suptitle("Handwritten Conv2D Experiment Results", fontsize=14)
+
+    axes[0].imshow(img, cmap='gray')
+    axes[0].set_title(f"Original\n{img.shape}")
+    axes[0].axis('off')
+
+    axes[1].imshow(np.abs(feat_x), cmap='gray')
+    axes[1].set_title(f"Sobel X (Vertical Edges)\n{feat_x.shape}")
+    axes[1].axis('off')
+
+    axes[2].imshow(np.abs(feat_y), cmap='gray')
+    axes[2].set_title(f"Sobel Y (Horizontal Edges)\n{feat_y.shape}")
+    axes[2].axis('off')
+
+    axes[3].imshow(pooled, cmap='gray')
+    axes[3].set_title(f"Max Pooling (2x2)\n{pooled.shape}")
+    axes[3].axis('off')
+
+    plt.tight_layout()
+    out_path = "/mnt/user-data/outputs/conv2d_result.png"
+    plt.savefig(out_path, dpi=150, bbox_inches='tight')
+    print(f"  结果已保存至 {out_path}")
+
+    # 4-6. 维度计算演示（不同 P/S 组合）
+    print("\n[Step 6] 维度计算公式演示")
+    print(f"{'P':>3} {'S':>3} {'K':>3} | {'H_out':>6} {'W_out':>6}")
+    print("-" * 28)
+    for p in [0, 1, 2]:
+        for s in [1, 2]:
+            ho = int(np.floor((H + 2*p - K) / s)) + 1
+            wo = int(np.floor((W + 2*p - K) / s)) + 1
+            print(f"{p:>3} {s:>3} {K:>3} | {ho:>6} {wo:>6}")
+
+    print("\n实验完成！")
+
+
+if __name__ == "__main__":
+    main()
