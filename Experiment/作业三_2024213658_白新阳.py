@@ -229,3 +229,74 @@ for epoch in range(1, epochs + 1):
         print(f"Epoch {epoch:>3d}/{epochs} | "
               f"Train Loss: {avg_loss:.4f} | Val Loss: {v_loss:.4f} | "
               f"Train Acc: {t_acc:.4f} | Val Acc: {v_acc:.4f}")
+
+#7.最终准确率
+print("\n" + "=" * 60)
+print("5. 最终评估结果")
+print("=" * 60)
+final_train_acc = accuracy(X_train, y_train, W1, b1, W2, b2)
+final_val_acc   = accuracy(X_val,   y_val,   W1, b1, W2, b2)
+final_test_acc  = accuracy(X_test,  y_test,  W1, b1, W2, b2)
+print(f"训练集准确率  : {final_train_acc:.4f} ({final_train_acc*100:.2f}%)")
+print(f"验证集准确率  : {final_val_acc:.4f}   ({final_val_acc*100:.2f}%)")
+print(f"测试集准确率  : {final_test_acc:.4f}   ({final_test_acc*100:.2f}%)")
+
+#8.绘图
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+fig.patch.set_facecolor('#0f0f1a')
+
+ep = np.arange(1, epochs + 1)
+
+# ── Loss 曲线 ────────────────────────────────
+ax1 = axes[0]
+ax1.set_facecolor('#1a1a2e')
+ax1.plot(ep, train_losses, color='#00d4ff', linewidth=2,   label='Train Loss')
+ax1.plot(ep, val_losses,   color='#ff6b9d', linewidth=2,   label='Val Loss',   linestyle='--')
+ax1.set_title('Loss vs Epoch', color='white', fontsize=14, fontweight='bold', pad=12)
+ax1.set_xlabel('Epoch', color='#aaaacc', fontsize=11)
+ax1.set_ylabel('Cross-Entropy Loss', color='#aaaacc', fontsize=11)
+ax1.tick_params(colors='#aaaacc')
+ax1.spines['bottom'].set_color('#444466')
+ax1.spines['left'].set_color('#444466')
+ax1.spines['top'].set_visible(False)
+ax1.spines['right'].set_visible(False)
+ax1.legend(facecolor='#252540', edgecolor='#444466', labelcolor='white', fontsize=10)
+ax1.grid(alpha=0.15, color='#6666aa')
+
+# ── Accuracy 曲线 ────────────────────────────
+ax2 = axes[1]
+ax2.set_facecolor('#1a1a2e')
+ax2.plot(ep, train_accs, color='#00d4ff', linewidth=2, label='Train Acc')
+ax2.plot(ep, val_accs,   color='#ff6b9d', linewidth=2, label='Val Acc',   linestyle='--')
+ax2.axhline(y=final_test_acc, color='#ffd700', linewidth=1.5,
+            linestyle=':', label=f'Test Acc = {final_test_acc:.4f}')
+ax2.set_title('Accuracy vs Epoch', color='white', fontsize=14, fontweight='bold', pad=12)
+ax2.set_xlabel('Epoch', color='#aaaacc', fontsize=11)
+ax2.set_ylabel('Accuracy', color='#aaaacc', fontsize=11)
+ax2.set_ylim(0, 1.05)
+ax2.tick_params(colors='#aaaacc')
+ax2.spines['bottom'].set_color('#444466')
+ax2.spines['left'].set_color('#444466')
+ax2.spines['top'].set_visible(False)
+ax2.spines['right'].set_visible(False)
+ax2.legend(facecolor='#252540', edgecolor='#444466', labelcolor='white', fontsize=10)
+ax2.grid(alpha=0.15, color='#6666aa')
+
+# 标注最终精度
+for ax, val, label in [
+    (ax2, final_train_acc, f'Train {final_train_acc:.3f}'),
+    (ax2, final_val_acc,   f'Val   {final_val_acc:.3f}'),
+]:
+    ax.annotate(label,
+                xy=(epochs, val), xytext=(-60, 8),
+                textcoords='offset points',
+                color='white', fontsize=9,
+                arrowprops=dict(arrowstyle='->', color='#888899', lw=1))
+
+plt.suptitle('Two-Layer MLP from Scratch  |  sklearn digits',
+             color='white', fontsize=15, fontweight='bold', y=1.01)
+plt.tight_layout()
+plt.savefig('mlp_training_curves.png',
+            dpi=150, bbox_inches='tight', facecolor=fig.get_facecolor())
+plt.close()
+print("\n训练曲线已保存至 mlp_training_curves.png")
