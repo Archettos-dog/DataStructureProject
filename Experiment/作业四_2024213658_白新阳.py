@@ -206,3 +206,28 @@ def train(model, optimizer, X_tr, y_tr, X_v, y_v,
 
     return train_losses, val_accs
 
+#7.模型对比
+EPOCHS     = 100
+BATCH_SIZE = 64
+LR         = 0.05
+GAMMA      = 0.9
+
+print("=" * 50)
+print("模型 A —— Baseline（普通 SGD，无 Dropout）")
+print("=" * 50)
+model_A = MLP(D, H, C, dropout_p=0.0, seed=1)          # Dropout 关闭
+optim_A = MomentumSGD(model_A.params(), lr=LR, momentum=0.0)  # γ=0 → 普通 SGD
+loss_A, acc_A = train(model_A, optim_A,
+                      X_train, y_train, X_val, y_val,
+                      epochs=EPOCHS, batch_size=BATCH_SIZE)
+
+print()
+print("=" * 50)
+print("模型 B —— Improved（Momentum SGD，Dropout p=0.5）")
+print("=" * 50)
+model_B = MLP(D, H, C, dropout_p=0.5, seed=1)          # Dropout 开启
+optim_B = MomentumSGD(model_B.params(), lr=LR, momentum=GAMMA)  # γ=0.9
+loss_B, acc_B = train(model_B, optim_B,
+                      X_train, y_train, X_val, y_val,
+                      epochs=EPOCHS, batch_size=BATCH_SIZE)
+
