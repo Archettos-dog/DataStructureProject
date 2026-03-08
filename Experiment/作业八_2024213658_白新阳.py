@@ -201,3 +201,106 @@ for c, cat_name in enumerate(CATEGORIES):
     print(f"\n  类别 {c} ({cat_name}):")
     print(f"    {top10_words}")
 
+# 6. Embedding 平均池化表示 + 分类
+print("\n" + "=" * 60)
+print("6. Embedding 平均池化（EmbeddingBag）分类器")
+print("=" * 60)
+
+# 编码所有文本为 id 列表
+def encode_all(texts_list):
+    return [encode(t) for t in texts_list]
+
+ids_train = encode_all(texts_train)
+ids_val   = encode_all(texts_val)
+ids_test  = encode_all(texts_test)
+
+def pad_batch(id_lists, pad_id=0):
+    """将变长 id 列表 pad 到同长度，返回 (ids_tensor, mask_tensor)"""
+    max_len = max(max((len(s) for s in id_lists), default=1), 1)
+    B = len(id_lists)
+    ids_arr  = np.zeros((B, max_len), dtype=np.int64)
+    mask_arr = np.zeros((B, max_len), dtype=np.float32)
+    for i, ids in enumerate(id_lists):
+        L = len(ids)
+        if L > 0:
+            ids_arr[i, :L]  = ids
+            mask_arr[i, :L] = 1.0
+    return torch.tensor(ids_arr), torch.tensor(mask_arr)
+
+class EmbeddingAvgClassifier(nn.Module):
+    def __init__(self, vocab_size, embed_dim, num_classes):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.fc = nn.Linear(embed_dim, num_classes)
+
+    def forward(self, ids, mask):
+        """
+        ids:  (B, L) LongTensor
+        mask: (B, L) FloatTensor，1 表示有效位置
+        """
+        emb = self.embedding(ids)           # (B, L, E)
+        # masked average pooling
+        mask_exp = mask.unsqueeze(-1)       # (B, L, 1)
+        sum_emb  = (emb * mask_exp).sum(1)  # (B, E)
+        lengths  = mask_exp.sum(1).clamp(min=1)  # (B, 1)
+        e_bar    = sum_emb / lengths        # (B, E)
+        logits   = self.fc(e_bar)           # (B, C)
+        return logits
+
+model_emb = EmbeddingAvgClassifier(vocab_size, EMBED_DIM, num_classes)
+optimizer_emb = optim.Adam(model_emb.parameters(), lr=LR)
+
+y_tr_t = torch.tensor(labels_train, dtype=torch.long)
+y_vl_t = torch.tensor(labels_val,   dtype=torch.long)
+y_te_t = torch.tensor(labels_test,  dtype=torch.long)
+
+# 构建整批 DataLoader（每个 epoch 动态 pad）
+class IdDataset(torch.utils.data.Dataset):
+    def __init__(self, id_lists, labels):
+        self.id_lists = id_lists
+        self.labels   = labels
+    def __len__(self):
+        return len(self.labels)
+    def __getitem__(self, idx):
+        return self.id_lists[idx], self.labels[idx]
+
+def collate_fn(batch):
+    id_lists, labels = zip(*batch)
+    ids_t, mask_t = pad_batch(id_lists)
+    return ids_t, mask_t, torch.tensor(labels, dtype=torch.long)
+
+train_ds_emb = IdDataset(ids_train, labels_train)
+train_dl_emb = DataLoader(train_ds_emb, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate_fn)
+
+def eval_acc_emb(id_lists, y_tensor):
+    model_emb.eval()
+    with torch.no_grad():
+        ids_t, mask_t = pad_batch(id_lists)
+        logits = model_emb(ids_t, mask_t)
+        preds  = logits.argmax(dim=1)
+        return (preds == y_tensor).float().mean().item()
+
+for epoch in range(1, EPOCHS + 1):
+    model_emb.train()
+    total_loss = 0.0
+    for ids_b, mask_b, yb in train_dl_emb:
+        logits = model_emb(ids_b, mask_b)
+        loss   = ce_loss(logits, yb)
+        optimizer_emb.zero_grad()
+        loss.backward()
+        optimizer_emb.step()
+        total_loss += loss.item() * len(yb)
+    avg_loss = total_loss / len(ids_train)
+    val_acc  = eval_acc_emb(ids_val, y_vl_t)
+    print(f"  Epoch {epoch:2d}/{EPOCHS} | train loss: {avg_loss:.4f} | val acc: {val_acc:.4f}")
+
+test_acc_emb = eval_acc_emb(ids_test, y_te_t)
+print(f"\n[Embedding Avg + Linear] Test Accuracy: {test_acc_emb:.4f}")
+
+# 汇总
+print("\n" + "=" * 60)
+print("实验结果汇总")
+print("=" * 60)
+print(f"  BoW + Softmax      Test Acc: {test_acc_bow:.4f}")
+print(f"  Embedding Avg+FC   Test Acc: {test_acc_emb:.4f}")
+print("=" * 60)
