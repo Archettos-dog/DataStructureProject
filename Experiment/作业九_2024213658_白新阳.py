@@ -98,3 +98,18 @@ class AttentionLayer(nn.Module):
         V = self.Wv(X)   # (B, L, d_v)
         H, attn = scaled_dot_product_attention(Q, K, V, mask)
         return H, attn   # (B, L, d_v), (B, L, L)
+    
+# 3. 合成数据生成
+def generate_dataset(n_samples):
+    """
+    生成指针检索数据集
+
+    Returns:
+        x : (n_samples, L)  token 序列，值域 [0, VOCAB)
+        p : (n_samples,)    指针位置，值域 [0, L)
+        y : (n_samples,)    目标 token = x[i, p[i]]
+    """
+    x = torch.randint(0, VOCAB, (n_samples, L))
+    p = torch.randint(0, L,    (n_samples,))
+    y = x[torch.arange(n_samples), p]
+    return x, p, y
