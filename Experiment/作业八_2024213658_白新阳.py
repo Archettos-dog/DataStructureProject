@@ -142,3 +142,49 @@ X_test_bow  = np.stack([text_to_bow(t) for t in texts_test]).astype(np.float32)
 print(f"\nX_train_bow 维度: {X_train_bow.shape}")
 print(f"X_val_bow   维度: {X_val_bow.shape}")
 print(f"X_test_bow  维度: {X_test_bow.shape}")
+
+# 4. BoW + Softmax 分类器（从零实现，使用 PyTorch）
+print("\n" + "=" * 60)
+print("4. BoW + Softmax 分类器（Adam 优化）")
+print("=" * 60)
+
+num_classes = len(CATEGORIES)
+
+# 转为 Tensor
+X_tr = torch.tensor(X_train_bow)
+y_tr = torch.tensor(labels_train, dtype=torch.long)
+X_vl = torch.tensor(X_val_bow)
+y_vl = torch.tensor(labels_val, dtype=torch.long)
+X_te = torch.tensor(X_test_bow)
+y_te = torch.tensor(labels_test, dtype=torch.long)
+
+# 模型参数
+W_bow = nn.Parameter(torch.randn(vocab_size, num_classes) * 0.01)
+b_bow = nn.Parameter(torch.zeros(num_classes))
+optimizer_bow = optim.Adam([W_bow, b_bow], lr=LR)
+ce_loss = nn.CrossEntropyLoss()
+
+train_dataset = TensorDataset(X_tr, y_tr)
+train_loader  = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+def eval_acc(X, y):
+    with torch.no_grad():
+        logits = X @ W_bow + b_bow
+        preds = logits.argmax(dim=1)
+        return (preds == y).float().mean().item()
+
+for epoch in range(1, EPOCHS + 1):
+    total_loss = 0.0
+    for xb, yb in train_loader:
+        logits = xb @ W_bow + b_bow  # (B, C)
+        loss = ce_loss(logits, yb)
+        optimizer_bow.zero_grad()
+        loss.backward()
+        optimizer_bow.step()
+        total_loss += loss.item() * len(xb)
+    avg_loss = total_loss / len(X_tr)
+    val_acc  = eval_acc(X_vl, y_vl)
+    print(f"  Epoch {epoch:2d}/{EPOCHS} | train loss: {avg_loss:.4f} | val acc: {val_acc:.4f}")
+
+test_acc_bow = eval_acc(X_te, y_te)
+print(f"\n[BoW + Softmax] Test Accuracy: {test_acc_bow:.4f}")
