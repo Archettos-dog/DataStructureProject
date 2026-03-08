@@ -305,3 +305,15 @@ def visualize(model, x_test, p_test, y_test, train_losses, test_accs):
     plt.show()
     print("\n  图像已保存至 attention_visualization.png")
 
+# 7. 主流程
+if __name__ == "__main__":
+    # 步骤 1：验证形状
+    verify_attention_shapes()
+
+    # 步骤 2：训练
+    model, x_test, p_test, y_test, train_losses, test_accs = train_and_evaluate()
+
+    # 步骤 3：可视化
+    visualize(model, x_test, p_test, y_test, train_losses, test_accs)
+
+    print("\n实验完成！")
