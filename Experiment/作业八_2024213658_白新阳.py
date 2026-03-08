@@ -65,3 +65,39 @@ for split_name, split_labels in [("Train", labels_train),
     dist = Counter(split_labels.tolist())
     for c, name in enumerate(CATEGORIES):
         print(f"  类别 {c} ({name}): {dist.get(c, 0)}")
+
+# 2. 构建词表与分词
+print("\n" + "=" * 60)
+print("2. 构建词表与分词")
+print("=" * 60)
+
+def tokenize(text: str):
+    """最简 tokenizer：小写 → 非字母数字替换为空格 → split"""
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text.split()
+
+# 统计训练集词频
+word_counter = Counter()
+for t in texts_train:
+    word_counter.update(tokenize(t))
+
+# 取 top-K，加入 <unk>
+vocab_words = ["<unk>"] + [w for w, _ in word_counter.most_common(TOP_K)]
+word2id = {w: i for i, w in enumerate(vocab_words)}
+vocab_size = len(vocab_words)
+UNK_ID = 0
+
+print(f"\nvocab_size (含 <unk>): {vocab_size}")
+
+# 示例
+sample_text = texts_train[0]
+sample_tokens = tokenize(sample_text)[:15]
+sample_ids = [word2id.get(tok, UNK_ID) for tok in sample_tokens]
+print(f"\n示例文本前 15 个 token: {sample_tokens}")
+print(f"对应词 id:              {sample_ids}")
+
+def encode(text: str):
+    return [word2id.get(tok, UNK_ID) for tok in tokenize(text)]
+
