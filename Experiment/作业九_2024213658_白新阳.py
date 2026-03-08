@@ -78,3 +78,23 @@ def verify_attention_shapes():
     assert torch.allclose(attn.sum(dim=-1), torch.ones(B, Tq), atol=1e-5), \
         "attn 行和不为 1！"
     print("  ✓ 形状验证通过\n")
+
+# 2. 注意力层（单头版本）
+class AttentionLayer(nn.Module):
+    """
+    单头注意力层
+    输入 X: (B, L, d_model)
+    输出 H: (B, L, d_v)
+    """
+    def __init__(self, d_model, d_k, d_v):
+        super().__init__()
+        self.Wq = nn.Linear(d_model, d_k, bias=False)
+        self.Wk = nn.Linear(d_model, d_k, bias=False)
+        self.Wv = nn.Linear(d_model, d_v, bias=False)
+
+    def forward(self, X, mask=None):
+        Q = self.Wq(X)   # (B, L, d_k)
+        K = self.Wk(X)   # (B, L, d_k)
+        V = self.Wv(X)   # (B, L, d_v)
+        H, attn = scaled_dot_product_attention(Q, K, V, mask)
+        return H, attn   # (B, L, d_v), (B, L, L)
