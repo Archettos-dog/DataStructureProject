@@ -46,3 +46,14 @@ def get_batch(batch_size=B, seq_len=T):
     y = torch.stack([ids[s + 1: s + seq_len + 1] for s in starts])  # (B, T)
     return x, y
 
+#2.embedding 层
+print("=" * 60)
+print("【2】Embedding 层")
+print("=" * 60)
+
+embedding = nn.Embedding(vocab_size, E)
+
+x_sample, _ = get_batch()
+print(f"随机 batch 输入 shape:  x = {x_sample.shape}  (B={B}, T={T})")
+x_emb_sample = embedding(x_sample)
+print(f"Embedding 输出 shape:   x_emb = {x_emb_sample.shape}  (B={B}, T={T}, E={E})\n")
