@@ -217,3 +217,91 @@ def train_and_evaluate():
 
     print(f"\n  最终测试准确率: {test_accs[-1]*100:.1f}%")
     return model, x_test, p_test, y_test, train_losses, test_accs
+
+# 6. 可视化
+def visualize(model, x_test, p_test, y_test, train_losses, test_accs):
+    print("\n" + "=" * 60)
+    print("【3】注意力权重可视化")
+    print("=" * 60)
+
+    model.eval()
+
+    # ---- 随机抽 4 个样本展示 ----
+    sample_ids = torch.randint(0, len(x_test), (4,))
+    fig, axes = plt.subplots(2, 3, figsize=(16, 9))
+
+    # 子图 1：训练曲线（loss）
+    ax = axes[0, 0]
+    ax.plot(range(1, EPOCHS + 1), train_losses, color='steelblue', lw=2)
+    ax.set_title("Training Loss", fontsize=13)
+    ax.set_xlabel("Epoch"); ax.set_ylabel("CrossEntropy Loss")
+    ax.grid(True, alpha=0.3)
+
+    # 子图 2：测试准确率
+    ax = axes[0, 1]
+    ax.plot(range(1, EPOCHS + 1), [a * 100 for a in test_accs],
+            color='darkorange', lw=2)
+    ax.set_title("Test Accuracy (%)", fontsize=13)
+    ax.set_xlabel("Epoch"); ax.set_ylabel("Accuracy (%)")
+    ax.set_ylim(0, 105)
+    ax.grid(True, alpha=0.3)
+
+    # 子图 3–6：4 个样本的注意力权重条形图
+    attn_axes = [axes[0, 2], axes[1, 0], axes[1, 1], axes[1, 2]]
+
+    for ax_i, sid in zip(attn_axes, sample_ids):
+        xi = x_test[sid].unsqueeze(0)    # (1, L)
+        pi = p_test[sid].unsqueeze(0)    # (1,)
+        yi = y_test[sid].item()
+
+        with torch.no_grad():
+            logits, attn = model(xi, pi)  # attn: (1, L)
+
+        attn_np = attn.squeeze(0).numpy()
+        pred_y  = logits.argmax(dim=-1).item()
+        pointer = pi.item()
+        argmax_pos = int(np.argmax(attn_np))
+
+        colors = ['#4C72B0'] * L
+        colors[pointer]    = '#C44E52'   # 真实指针位置（红色）
+        colors[argmax_pos] = '#55A868'   # argmax 位置（绿色，若与红重叠则覆盖）
+        if argmax_pos == pointer:
+            colors[pointer] = '#C44E52'
+
+        ax_i.bar(range(L), attn_np, color=colors, edgecolor='white', linewidth=0.5)
+        ax_i.set_title(
+            f"Sample {sid.item()}  p={pointer}  argmax={argmax_pos}\n"
+            f"y={yi}  pred={pred_y}  {'✓' if pred_y==yi else '✗'}",
+            fontsize=10
+        )
+        ax_i.set_xlabel("Token Position")
+        ax_i.set_ylabel("Attention Weight")
+        ax_i.set_xticks(range(L))
+        ax_i.grid(True, axis='y', alpha=0.3)
+
+        # 打印到终端
+        print(f"\n  样本 {sid.item()}")
+        print(f"    输入序列 x : {x_test[sid].tolist()}")
+        print(f"    指针位置 p : {pointer}")
+        print(f"    目标 y     : {yi}   预测: {pred_y}  {'✓' if pred_y==yi else '✗'}")
+        print(f"    attn 权重  : {[round(float(a), 3) for a in attn_np]}")
+        print(f"    argmax(attn) = {argmax_pos}  (p={pointer})")
+
+    # 图例说明
+    from matplotlib.patches import Patch
+    legend_elements = [
+        Patch(facecolor='#C44E52', label='True pointer p'),
+        Patch(facecolor='#55A868', label='argmax(attn)'),
+        Patch(facecolor='#4C72B0', label='Other positions'),
+    ]
+    fig.legend(handles=legend_elements, loc='lower center',
+               ncol=3, fontsize=10, framealpha=0.8)
+
+    plt.suptitle("Scaled Dot-Product Attention — Pointer Retrieval Task",
+                 fontsize=14, fontweight='bold', y=1.01)
+    plt.tight_layout()
+    plt.savefig("/mnt/user-data/outputs/attention_visualization.png",
+                dpi=150, bbox_inches='tight')
+    plt.show()
+    print("\n  图像已保存至 attention_visualization.png")
+
