@@ -188,3 +188,16 @@ for epoch in range(1, EPOCHS + 1):
 
 test_acc_bow = eval_acc(X_te, y_te)
 print(f"\n[BoW + Softmax] Test Accuracy: {test_acc_bow:.4f}")
+
+# 5. BoW 可解释性分析
+print("\n" + "=" * 60)
+print("5. BoW 可解释性分析（每类 Top-10 词）")
+print("=" * 60)
+
+W_np = W_bow.detach().numpy()  # (V, C)
+for c, cat_name in enumerate(CATEGORIES):
+    top10_ids = np.argsort(W_np[:, c])[::-1][:10]
+    top10_words = [vocab_words[i] for i in top10_ids]
+    print(f"\n  类别 {c} ({cat_name}):")
+    print(f"    {top10_words}")
+
