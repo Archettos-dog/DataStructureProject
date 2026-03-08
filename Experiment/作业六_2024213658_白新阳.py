@@ -111,3 +111,36 @@ def get_dataloaders(batch_size: int = 64):
                               shuffle=False, num_workers=2, pin_memory=True)
 
     return train_loader, test_loader
+
+#4.训练、测试函数
+def train_one_epoch(model, loader, criterion, optimizer, device):
+    model.train()
+    total_loss = 0.0
+    for inputs, labels in loader:
+        inputs, labels = inputs.to(device), labels.to(device)
+
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item() * inputs.size(0)
+
+    avg_loss = total_loss / len(loader.dataset)
+    return avg_loss
+
+
+def evaluate(model, loader, device):
+    model.eval()
+    correct = 0
+    with torch.no_grad():
+        for inputs, labels in loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            preds = outputs.argmax(dim=1)
+            correct += (preds == labels).sum().item()
+
+    accuracy = correct / len(loader.dataset)
+    return accuracy
+
