@@ -113,3 +113,53 @@ def generate_dataset(n_samples):
     p = torch.randint(0, L,    (n_samples,))
     y = x[torch.arange(n_samples), p]
     return x, p, y
+
+# 4. 指针检索模型
+class PointerRetrievalModel(nn.Module):
+    """
+    指针检索模型：
+    - 指针 one-hot (B,1,L) → Wpos → Q (B,1,d_k)
+    - token embedding → K (B,L,d_k), V (B,L,d_v)
+    - 注意力输出 (B,1,d_v) → 分类器 → logits (B, VOCAB)
+    """
+    def __init__(self, vocab, seq_len, d_model, d_k, d_v):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab, d_model)
+
+        # 指针投影：one-hot (L,) → d_k
+        self.Wpos = nn.Linear(seq_len, d_k, bias=False)
+
+        # K, V 投影（从 token embedding）
+        self.Wk = nn.Linear(d_model, d_k, bias=False)
+        self.Wv = nn.Linear(d_model, d_v, bias=False)
+
+        # 分类头
+        self.classifier = nn.Linear(d_v, vocab)
+
+    def forward(self, x, p):
+        """
+        x : (B, L)  token ids
+        p : (B,)    指针位置
+        """
+        B = x.size(0)
+
+        # ---- token embedding ----
+        emb = self.embedding(x)          # (B, L, d_model)
+
+        # ---- K, V ----
+        K = self.Wk(emb)                 # (B, L, d_k)
+        V = self.Wv(emb)                 # (B, L, d_v)
+
+        # ---- query：指针 one-hot → Q ----
+        one_hot = torch.zeros(B, 1, L, device=x.device)
+        one_hot[torch.arange(B), 0, p] = 1.0   # (B, 1, L)
+        Q = self.Wpos(one_hot)           # (B, 1, d_k)
+
+        # ---- 缩放点积注意力 ----
+        out, attn = scaled_dot_product_attention(Q, K, V)
+        # out : (B, 1, d_v)   attn: (B, 1, L)
+
+        # ---- 分类 ----
+        logits = self.classifier(out.squeeze(1))   # (B, VOCAB)
+
+        return logits, attn.squeeze(1)             # (B, VOCAB), (B, L)
