@@ -163,3 +163,57 @@ class PointerRetrievalModel(nn.Module):
         logits = self.classifier(out.squeeze(1))   # (B, VOCAB)
 
         return logits, attn.squeeze(1)             # (B, VOCAB), (B, L)
+    
+# 5. 训练与评估
+def train_and_evaluate():
+    print("=" * 60)
+    print("【2】训练指针检索模型")
+    print("=" * 60)
+
+    # 数据
+    x_train, p_train, y_train = generate_dataset(N_TRAIN)
+    x_test,  p_test,  y_test  = generate_dataset(N_TEST)
+
+    # 模型、优化器、损失
+    model     = PointerRetrievalModel(VOCAB, L, D_MODEL, D_K, D_V)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+    criterion = nn.CrossEntropyLoss()
+
+    train_losses, test_accs = [], []
+
+    for epoch in range(1, EPOCHS + 1):
+        model.train()
+        # mini-batch 训练
+        perm   = torch.randperm(N_TRAIN)
+        ep_loss = 0.0
+        n_batches = 0
+        for i in range(0, N_TRAIN, BATCH):
+            idx  = perm[i : i + BATCH]
+            xb, pb, yb = x_train[idx], p_train[idx], y_train[idx]
+
+            optimizer.zero_grad()
+            logits, _ = model(xb, pb)
+            loss = criterion(logits, yb)
+            loss.backward()
+            optimizer.step()
+
+            ep_loss   += loss.item()
+            n_batches += 1
+
+        avg_loss = ep_loss / n_batches
+
+        # 测试准确率
+        model.eval()
+        with torch.no_grad():
+            logits_test, _ = model(x_test, p_test)
+            preds = logits_test.argmax(dim=-1)
+            acc   = (preds == y_test).float().mean().item()
+
+        train_losses.append(avg_loss)
+        test_accs.append(acc)
+
+        if epoch % 5 == 0 or epoch == 1:
+            print(f"  Epoch {epoch:3d}/{EPOCHS}  loss={avg_loss:.4f}  test_acc={acc*100:.1f}%")
+
+    print(f"\n  最终测试准确率: {test_accs[-1]*100:.1f}%")
+    return model, x_test, p_test, y_test, train_losses, test_accs
