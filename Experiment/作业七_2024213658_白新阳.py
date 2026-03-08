@@ -5,7 +5,7 @@ from typing import Optional
 import random
 import os
 
-CORPUS_PATH = "tiny_corpus_rnn.txt"   # 数据文件路径
+CORPUS_PATH = r"E:\Files\DataStructureProject\Experiment\tiny_corpus_rnn.txt"   # 数据文件路径
 T           = 32      # 序列长度（time steps）
 E           = 32      # Embedding 维度
 H           = 128     # 隐藏层维度
