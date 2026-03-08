@@ -58,3 +58,35 @@ class LeNet5(nn.Module):
         x = self.flatten(x)
         x = self.fc(x)
         return x
+    
+    #2，维度自检函数
+    def check_shape(model: LeNet5):
+    """
+    输入随机张量 (1,1,28,28)，逐层打印并断言输出 shape。
+    """
+    print("=" * 50)
+    print("  维度自检 check_shape()")
+    print("=" * 50)
+
+    x = torch.randn(1, 1, 28, 28)
+    print(f"  输入          : {tuple(x.shape)}")
+    assert x.shape == (1, 1, 28, 28), "输入维度错误"
+
+    x = model.layer1(x)
+    print(f"  Layer1 输出   : {tuple(x.shape)}")
+    assert x.shape == (1, 6, 14, 14), f"Layer1 维度异常: {x.shape}"
+
+    x = model.layer2(x)
+    print(f"  Layer2 输出   : {tuple(x.shape)}")
+    assert x.shape == (1, 16, 5, 5), f"Layer2 维度异常: {x.shape}"
+
+    x = model.flatten(x)
+    print(f"  Flatten 输出  : {tuple(x.shape)}")
+    assert x.shape == (1, 400), f"Flatten 维度异常: {x.shape}"
+
+    x = model.fc(x)
+    print(f"  FC 输出       : {tuple(x.shape)}")
+    assert x.shape == (1, 10), f"FC 维度异常: {x.shape}"
+
+    print("  ✓ 所有维度断言通过！")
+    print("=" * 50)
