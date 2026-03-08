@@ -144,3 +144,47 @@ def evaluate(model, loader, device):
     accuracy = correct / len(loader.dataset)
     return accuracy
 
+#5.主训练pipeline
+def main():
+    # ── 超参数 ──
+    EPOCHS     = 10
+    BATCH_SIZE = 64
+    LR         = 0.001
+
+    # ── 设备检测 ──
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"\n  使用设备: {device.upper()}\n")
+
+    # ── 数据集 ──
+    train_loader, test_loader = get_dataloaders(BATCH_SIZE)
+    print(f"  训练集大小: {len(train_loader.dataset)}")
+    print(f"  测试集大小: {len(test_loader.dataset)}\n")
+
+    # ── 模型 ──
+    model = LeNet5().to(device)
+
+    # ── 维度自检（CPU 即可）──
+    check_shape(LeNet5())   # 用 CPU 副本检查，不影响主模型
+    print()
+
+    # ── 损失函数 & 优化器 ──
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=LR)
+
+    # ── 训练循环 ──
+    print(f"{'Epoch':>6}  {'Train Loss':>12}  {'Test Acc':>10}")
+    print("-" * 34)
+    for epoch in range(1, EPOCHS + 1):
+        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        test_acc   = evaluate(model, test_loader, device)
+        print(f"{epoch:>6}  {train_loss:>12.4f}  {test_acc:>9.2%}")
+
+    print("\n  训练完成！")
+
+    # ── 保存模型权重（可选）──
+    torch.save(model.state_dict(), "lenet5_fashionmnist.pth")
+    print("  模型权重已保存至 lenet5_fashionmnist.pth")
+
+
+if __name__ == "__main__":
+    main()
