@@ -101,3 +101,44 @@ print(f"对应词 id:              {sample_ids}")
 def encode(text: str):
     return [word2id.get(tok, UNK_ID) for tok in tokenize(text)]
 
+# 3. 实现 BoW 特征（简化 TF-IDF + L2 归一化）
+print("\n" + "=" * 60)
+print("3. 实现 BoW 特征（简化 TF-IDF）")
+print("=" * 60)
+
+# 计算 IDF：在训练集上统计 DF
+df = np.zeros(vocab_size, dtype=np.float32)
+for t in texts_train:
+    ids_set = set(encode(t))
+    for i in ids_set:
+        df[i] += 1
+
+N_train = len(texts_train)
+idf = np.log((N_train + 1) / (df + 1)) + 1  # 平滑 IDF
+
+def text_to_bow(text: str) -> np.ndarray:
+    """返回 TF-IDF 加权的 BoW 向量，再 L2 归一化"""
+    ids = encode(text)
+    if len(ids) == 0:
+        return np.zeros(vocab_size, dtype=np.float32)
+    # TF：长度归一的词频
+    tf = np.zeros(vocab_size, dtype=np.float32)
+    for i in ids:
+        tf[i] += 1
+    tf /= len(ids)
+    # TF-IDF
+    vec = tf * idf
+    # L2 归一化
+    norm = np.linalg.norm(vec)
+    if norm > 0:
+        vec /= norm
+    return vec
+
+# 构建矩阵
+X_train_bow = np.stack([text_to_bow(t) for t in texts_train]).astype(np.float32)
+X_val_bow   = np.stack([text_to_bow(t) for t in texts_val]).astype(np.float32)
+X_test_bow  = np.stack([text_to_bow(t) for t in texts_test]).astype(np.float32)
+
+print(f"\nX_train_bow 维度: {X_train_bow.shape}")
+print(f"X_val_bow   维度: {X_val_bow.shape}")
+print(f"X_test_bow  维度: {X_test_bow.shape}")
