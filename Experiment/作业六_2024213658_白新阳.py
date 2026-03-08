@@ -59,8 +59,8 @@ class LeNet5(nn.Module):
         x = self.fc(x)
         return x
     
-    #2，维度自检函数
-    def check_shape(model: LeNet5):
+#2，维度自检函数
+def check_shape(model: LeNet5):
     """
     输入随机张量 (1,1,28,28)，逐层打印并断言输出 shape。
     """
@@ -90,3 +90,24 @@ class LeNet5(nn.Module):
 
     print("  ✓ 所有维度断言通过！")
     print("=" * 50)
+
+#3.数据加载
+def get_dataloaders(batch_size: int = 64):
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ])
+
+    train_dataset = datasets.FashionMNIST(
+        root="./data", train=True, download=True, transform=transform
+    )
+    test_dataset = datasets.FashionMNIST(
+        root="./data", train=False, download=True, transform=transform
+    )
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size,
+                              shuffle=True,  num_workers=2, pin_memory=True)
+    test_loader  = DataLoader(test_dataset,  batch_size=batch_size,
+                              shuffle=False, num_workers=2, pin_memory=True)
+
+    return train_loader, test_loader
