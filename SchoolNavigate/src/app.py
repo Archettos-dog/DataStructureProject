@@ -17,7 +17,8 @@ API 一览：
     DELETE /api/edge/<u>/<v>                 删除道路
     GET  /api/connected                      检查全图连通性
 """
-
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 from flask import Flask, request, jsonify, render_template
 from data import build_graph
 from algorithms import dijkstra, dfs, bfs, is_connected, connected_components
