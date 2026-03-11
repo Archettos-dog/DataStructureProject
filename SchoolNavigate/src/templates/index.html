@@ -618,50 +618,23 @@ const CAT_COLOR = {
 //  初始化
 // ============================================================
 window.addEventListener('load', async () => {
-  // 1. 获取 DOM，确保元素存在
+  // 在 load 事件后获取 DOM，确保元素存在
   canvas  = document.getElementById('canvas');
   ctx     = canvas.getContext('2d');
   tooltip = document.getElementById('tooltip');
   mapArea = document.getElementById('map-area');
-
-  // 2. 初始调用一次，确保后面 loadGraph 里的 resetView() 能拿到正确的容器宽高
   resizeCanvas();
-
-  // 3. 引入 ResizeObserver 监听地图容器的实际尺寸变化
-  const observer = new ResizeObserver(() => {
-    resizeCanvas();
-    draw(); // 如果你希望窗口改变时画面自动居中，这里可以换成 resetView()
-  });
-  // 开始观测 mapArea 容器
-  observer.observe(mapArea);
-
-  // 4. 加载数据并启动渲染循环
+  registerCanvasEvents(); // canvas 赋值后再绑定事件
   await loadGraph();
   startRenderLoop();
 });
 
-//window.addEventListener('resize', () => { resizeCanvas(); draw(); });
-
-// 1. 新增两个全局变量，用于记录逻辑视口尺寸
-let cssWidth = 0, cssHeight = 0;
+window.addEventListener('resize', () => { resizeCanvas(); draw(); });
 
 function resizeCanvas() {
   const rect = mapArea.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1; // 获取屏幕像素比
-  
-  cssWidth = rect.width;
-  cssHeight = rect.height;
-
-  // 设置画布物理像素大小（高分屏放大）
-  canvas.width  = cssWidth * dpr;
-  canvas.height = cssHeight * dpr;
-  
-  // 设置画布 CSS 显示大小
-  canvas.style.width  = cssWidth + 'px';
-  canvas.style.height = cssHeight + 'px';
-  
-  // 缩放绘图上下文，这样你底下的绘制代码完全不用改！
-  ctx.scale(dpr, dpr); 
+  canvas.width  = rect.width;
+  canvas.height = rect.height;
 }
 
 // ============================================================
@@ -722,16 +695,16 @@ function resetView() {
   }
   const dataW = maxX - minX || 1, dataH = maxY - minY || 1;
   const padding = 0.82;  // 留边比例，越大节点越铺满画布
-  const scaleX = (cssWidth  * padding) / dataW;
-  const scaleY = (cssHeight * padding) / dataH;
+  const scaleX = (canvas.width  * padding) / dataW;
+  const scaleY = (canvas.height * padding) / dataH;
   viewScale = Math.min(scaleX, scaleY);  // 去掉 1.2 上限，完全自适应
-  viewX = cssWidth  / 2 - ((minX + maxX) / 2) * viewScale;
-  viewY = cssHeight / 2 - ((minY + maxY) / 2) * viewScale;
+  viewX = canvas.width  / 2 - ((minX + maxX) / 2) * viewScale;
+  viewY = canvas.height / 2 - ((minY + maxY) / 2) * viewScale;
   draw();
 }
 
 function zoom(factor) {
-  const cx = cssWidth / 2, cy = cssHeight / 2;
+  const cx = canvas.width / 2, cy = canvas.height / 2;
   viewX = cx - (cx - viewX) * factor;
   viewY = cy - (cy - viewY) * factor;
   viewScale *= factor;
@@ -750,73 +723,74 @@ function dataToCanvas(dx, dy) {
 
 // ============================================================
 //  鼠标事件：拖拽 + tooltip + 右键选坐标
+//  注意：必须在 load 事件后 canvas 赋值完毕再调用此函数
 // ============================================================
-canvas.addEventListener('mousedown', e => {
-  if (e.button === 0) {
-    e.preventDefault(); // <--- 加上这一行！强制拦截浏览器默认行为
-    dragging = true;
-    canvas.classList.add('grabbing');
-    dragStartX = e.clientX; 
-    dragStartY = e.clientY;
-    viewStartX = viewX;     
-    viewStartY = viewY;
-  }
-});
+function registerCanvasEvents() {
+  canvas.addEventListener('mousedown', e => {
+    if (e.button === 0) {
+      e.preventDefault();
+      dragging = true;
+      canvas.classList.add('grabbing');
+      dragStartX = e.clientX; dragStartY = e.clientY;
+      viewStartX = viewX;     viewStartY = viewY;
+    }
+  });
 
-canvas.addEventListener('mousemove', e => {
-  if (dragging) {
-    viewX = viewStartX + (e.clientX - dragStartX);
-    viewY = viewStartY + (e.clientY - dragStartY);
+  canvas.addEventListener('mousemove', e => {
+    if (dragging) {
+      viewX = viewStartX + (e.clientX - dragStartX);
+      viewY = viewStartY + (e.clientY - dragStartY);
+      draw();
+      return;
+    }
+    // Tooltip：检测悬停节点
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const hovered = getNodeAt(mx, my);
+    if (hovered) {
+      const node = graphData.nodes[hovered];
+      const neighborNames = graphData.edges
+        .filter(e => e.from === hovered || e.to === hovered)
+        .map(e => e.from === hovered ? e.to : e.from);
+      tooltip.innerHTML =
+        `<b style="color:var(--accent)">${hovered}</b><br>` +
+        `类别: ${node.category || '-'}<br>` +
+        `相邻: ${neighborNames.join('、') || '无'}`;
+      tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+      tooltip.style.top  = (e.clientY - rect.top  - 10) + 'px';
+      tooltip.classList.add('show');
+    } else {
+      tooltip.classList.remove('show');
+    }
+  });
+
+  canvas.addEventListener('mouseup',   () => { dragging = false; canvas.classList.remove('grabbing'); });
+  canvas.addEventListener('mouseleave',() => { dragging = false; canvas.classList.remove('grabbing'); tooltip.classList.remove('show'); });
+
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    viewX = mx - (mx - viewX) * factor;
+    viewY = my - (my - viewY) * factor;
+    viewScale *= factor;
     draw();
-    return;
-  }
-  // Tooltip：检测悬停节点
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-  const hovered = getNodeAt(mx, my);
-  if (hovered) {
-    const node = graphData.nodes[hovered];
-    const neighborNames = graphData.edges
-      .filter(e => e.from === hovered || e.to === hovered)
-      .map(e => e.from === hovered ? e.to : e.from);
-    tooltip.innerHTML =
-      `<b style="color:var(--accent)">${hovered}</b><br>` +
-      `类别: ${node.category || '-'}<br>` +
-      `相邻: ${neighborNames.join('、') || '无'}`;
-    tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
-    tooltip.style.top  = (e.clientY - rect.top  - 10) + 'px';
-    tooltip.classList.add('show');
-  } else {
-    tooltip.classList.remove('show');
-  }
-});
+  }, { passive: false });
 
-canvas.addEventListener('mouseup',   () => { dragging = false; canvas.classList.remove('grabbing'); });
-canvas.addEventListener('mouseleave',() => { dragging = false; canvas.classList.remove('grabbing'); tooltip.classList.remove('show'); });
-
-canvas.addEventListener('wheel', e => {
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-  const factor = e.deltaY < 0 ? 1.1 : 0.9;
-  viewX = mx - (mx - viewX) * factor;
-  viewY = my - (my - viewY) * factor;
-  viewScale *= factor;
-  draw();
-}, { passive: false });
-
-// 右键：选取坐标（用于添加建筑）
-canvas.addEventListener('contextmenu', e => {
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const {x, y} = canvasToData(e.clientX - rect.left, e.clientY - rect.top);
-  document.getElementById('new-node-x').value = Math.round(x);
-  document.getElementById('new-node-y').value = Math.round(y);
-  // 自动打开添加建筑面板
-  const sec = document.getElementById('sec-add-node');
-  if (!sec.classList.contains('open')) toggleSection('sec-add-node');
-  showToast(`📍 坐标已选取：(${Math.round(x)}, ${Math.round(y)})`);
-});
+  // 右键：选取坐标（用于添加建筑）
+  canvas.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const {x, y} = canvasToData(e.clientX - rect.left, e.clientY - rect.top);
+    document.getElementById('new-node-x').value = Math.round(x);
+    document.getElementById('new-node-y').value = Math.round(y);
+    // 自动打开添加建筑面板
+    const sec = document.getElementById('sec-add-node');
+    if (!sec.classList.contains('open')) toggleSection('sec-add-node');
+    showToast(`📍 坐标已选取：(${Math.round(x)}, ${Math.round(y)})`);
+  });
+}
 
 // ============================================================
 //  命中检测：找鼠标下的节点
@@ -843,14 +817,7 @@ function startRenderLoop() {
 }
 
 function draw() {
-  // === 彻底清除画布残影的核心代码 ===
-  ctx.save();                           // 1. 保存当前的绘图状态（比如 dpr 带来的缩放）
-  ctx.setTransform(1, 0, 0, 1, 0, 0);   // 2. 强制将坐标系矩阵重置为原始的 1:1 状态
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // 3. 精准清除整个物理画布
-  ctx.restore();                        // 4. 恢复之前的绘图状态，继续后面的绘制
-  // ===================================
-
-  // 继续原有的绘制逻辑
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawEdges();
   drawNodes();
 }
@@ -967,7 +934,7 @@ function drawNodes() {
     // 文字标签（非路口节点才显示）
     if (!isJunction && viewScale > 0.15) {
       ctx.save();
-      const fontSize = Math.max(12, Math.min(16, 14 * viewScale));
+      const fontSize = Math.max(8, Math.min(14, 12 * viewScale));
       ctx.font = `${inPath ? 'bold' : 'normal'} ${fontSize}px Noto Sans SC, sans-serif`;
       ctx.fillStyle  = inPath ? '#ffffff' : 'rgba(180,220,255,0.85)';
       ctx.textAlign  = 'center';
