@@ -630,10 +630,26 @@ window.addEventListener('load', async () => {
 
 window.addEventListener('resize', () => { resizeCanvas(); draw(); });
 
+// 1. 新增两个全局变量，用于记录逻辑视口尺寸
+let cssWidth = 0, cssHeight = 0;
+
 function resizeCanvas() {
   const rect = mapArea.getBoundingClientRect();
-  canvas.width  = rect.width;
-  canvas.height = rect.height;
+  const dpr = window.devicePixelRatio || 1; // 获取屏幕像素比
+  
+  cssWidth = rect.width;
+  cssHeight = rect.height;
+
+  // 设置画布物理像素大小（高分屏放大）
+  canvas.width  = cssWidth * dpr;
+  canvas.height = cssHeight * dpr;
+  
+  // 设置画布 CSS 显示大小
+  canvas.style.width  = cssWidth + 'px';
+  canvas.style.height = cssHeight + 'px';
+  
+  // 缩放绘图上下文，这样你底下的绘制代码完全不用改！
+  ctx.scale(dpr, dpr); 
 }
 
 // ============================================================
@@ -694,16 +710,16 @@ function resetView() {
   }
   const dataW = maxX - minX || 1, dataH = maxY - minY || 1;
   const padding = 0.82;  // 留边比例，越大节点越铺满画布
-  const scaleX = (canvas.width  * padding) / dataW;
-  const scaleY = (canvas.height * padding) / dataH;
+  const scaleX = (cssWidth  * padding) / dataW;
+  const scaleY = (cssHeight * padding) / dataH;
   viewScale = Math.min(scaleX, scaleY);  // 去掉 1.2 上限，完全自适应
-  viewX = canvas.width  / 2 - ((minX + maxX) / 2) * viewScale;
-  viewY = canvas.height / 2 - ((minY + maxY) / 2) * viewScale;
+  viewX = cssWidth  / 2 - ((minX + maxX) / 2) * viewScale;
+  viewY = cssHeight / 2 - ((minY + maxY) / 2) * viewScale;
   draw();
 }
 
 function zoom(factor) {
-  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const cx = cssWidth / 2, cy = cssHeight / 2;
   viewX = cx - (cx - viewX) * factor;
   viewY = cy - (cy - viewY) * factor;
   viewScale *= factor;
@@ -929,7 +945,7 @@ function drawNodes() {
     // 文字标签（非路口节点才显示）
     if (!isJunction && viewScale > 0.15) {
       ctx.save();
-      const fontSize = Math.max(8, Math.min(14, 12 * viewScale));
+      const fontSize = Math.max(12, Math.min(16, 14 * viewScale));
       ctx.font = `${inPath ? 'bold' : 'normal'} ${fontSize}px Noto Sans SC, sans-serif`;
       ctx.fillStyle  = inPath ? '#ffffff' : 'rgba(180,220,255,0.85)';
       ctx.textAlign  = 'center';
