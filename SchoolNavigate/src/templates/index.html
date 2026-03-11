@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>北邮校园导航系统</title>
+<!-- Orbitron 科技字体（cdnjs，国内可访问）-->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+  @import url('https://fonts.loli.net/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500&display=swap');
+</style>
+<style>
+/* ============================================================
+   CSS 变量 & 基础重置
+   ============================================================ */
+:root {
+  --bg:          #080d14;
+  --bg2:         #0d1520;
+  --bg3:         #111d2e;
+  --panel:       #0a1628;
+  --border:      #1a3a5c;
+  --border-glow: #0d6efd;
+  --accent:      #00c8ff;
+  --accent2:     #0066ff;
+  --accent-dim:  #004a99;
+  --text:        #cde4f5;
+  --text-dim:    #5a7a99;
+  --text-bright: #eef8ff;
+  --success:     #00e5a0;
+  --warning:     #ffb300;
+  --danger:      #ff3d6b;
+
+  /* 建筑类别颜色 */
+  --c-gate:      #ffb300;
+  --c-teaching:  #00c8ff;
+  --c-dorm:      #00e5a0;
+  --c-facility:  #ff7043;
+  --c-admin:     #b388ff;
+  --c-junction:  #445566;
+
+  --font-display: 'Orbitron', monospace;
+  --font-body:    'Noto Sans SC', sans-serif;
+  --radius:       6px;
+  --transition:   0.2s ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  overflow: hidden;
+}
+
+/* ============================================================
+   顶部标题栏
+   ============================================================ */
+#topbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 48px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 20px;
+  z-index: 100;
+  box-shadow: 0 2px 20px rgba(0,200,255,0.08);
+}
+
+#topbar h1 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  text-shadow: 0 0 20px rgba(0,200,255,0.6);
+  white-space: nowrap;
+}
+
+#topbar .sep { width: 1px; height: 24px; background: var(--border); }
+
+#status-bar {
+  display: flex; gap: 16px; align-items: center;
+  font-size: 11px; color: var(--text-dim);
+  font-family: var(--font-display);
+}
+
+#status-bar span { display: flex; align-items: center; gap: 5px; }
+#status-bar .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+#toast {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--accent);
+  font-family: var(--font-display);
+  min-width: 200px;
+  text-align: right;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#toast.show { opacity: 1; }
+
+/* ============================================================
+   主布局
+   ============================================================ */
+#layout {
+  display: flex;
+  height: 100vh;
+  padding-top: 48px;
+}
+
+/* ============================================================
+   左侧面板
+   ============================================================ */
+#panel {
+  width: 300px;
+  min-width: 300px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+#panel::-webkit-scrollbar { width: 4px; }
+#panel::-webkit-scrollbar-track { background: transparent; }
+#panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.section {
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg2);
+  transition: background var(--transition);
+}
+.section-header:hover { background: var(--bg3); }
+
+.section-header .icon {
+  font-size: 14px; width: 18px; text-align: center;
+}
+.section-header .label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  flex: 1;
+}
+.section-header .arrow {
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform var(--transition);
+}
+.section.open .section-header .arrow { transform: rotate(90deg); }
+
+.section-body {
+  display: none;
+  padding: 14px 16px;
+  gap: 10px;
+  flex-direction: column;
+}
+.section.open .section-body { display: flex; }
+
+/* ============================================================
+   表单控件
+   ============================================================ */
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+input, select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 7px 10px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  width: 100%;
+}
+input:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0,200,255,0.15);
+}
+input::placeholder { color: var(--text-dim); }
+
+select option { background: var(--bg2); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.btn:hover {
+  background: rgba(0,200,255,0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(0,200,255,0.3);
+  color: var(--text-bright);
+}
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: var(--accent2);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--accent);
+  box-shadow: 0 0 20px rgba(0,200,255,0.5);
+}
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.btn-danger:hover {
+  background: rgba(255,61,107,0.12);
+  box-shadow: 0 0 12px rgba(255,61,107,0.3);
+}
+
+.btn-success {
+  border-color: var(--success);
+  color: var(--success);
+}
+.btn-success:hover {
+  background: rgba(0,229,160,0.1);
+  box-shadow: 0 0 12px rgba(0,229,160,0.3);
+}
+
+.btn-full { width: 100%; }
+.btn-row { display: flex; gap: 8px; }
+
+/* ============================================================
+   结果面板
+   ============================================================ */
+#result-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text);
+  min-height: 60px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.result-path {
+  color: var(--accent);
+  font-weight: 500;
+}
+.result-dist {
+  color: var(--warning);
+  font-family: var(--font-display);
+  font-size: 11px;
+}
+.result-error { color: var(--danger); }
+.result-ok    { color: var(--success); }
+
+/* ============================================================
+   图例
+   ============================================================ */
+#legend {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+}
+#legend .legend-title {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--text);
+}
+.legend-dot {
+  width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+}
+
+/* ============================================================
+   右侧地图区域
+   ============================================================ */
+#map-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  background-image:
+    linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+#canvas {
+  position: absolute;
+  top: 0; left: 0;
+  cursor: grab;
+}
+#canvas.grabbing { cursor: grabbing; }
+
+/* 悬浮提示 */
+#tooltip {
+  position: absolute;
+  background: var(--bg2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-bright);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+  white-space: nowrap;
+  box-shadow: 0 0 16px rgba(0,200,255,0.3);
+}
+#tooltip.show { opacity: 1; }
+
+/* 右下角小工具 */
+#map-controls {
+  position: absolute;
+  bottom: 16px; right: 16px;
+  display: flex; flex-direction: column; gap: 6px;
+  z-index: 10;
+}
+.map-ctrl-btn {
+  width: 32px; height: 32px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+}
+.map-ctrl-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 10px rgba(0,200,255,0.3);
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     顶部标题栏
+     ============================================================ -->
+<div id="topbar">
+  <h1>⬡ BUPT CAMPUS NAV</h1>
+  <div class="sep"></div>
+  <div id="status-bar">
+    <span><span class="dot"></span>系统在线</span>
+    <span id="stat-nodes">建筑: --</span>
+    <span id="stat-edges">道路: --</span>
+    <span id="stat-conn">连通性: --</span>
+  </div>
+  <div id="toast"></div>
+</div>
+
+<!-- ============================================================
+     主布局
+     ============================================================ -->
+<div id="layout">
+
+  <!-- 左侧面板 -->
+  <div id="panel">
+
+    <!-- 图例 -->
+    <div id="legend">
+      <div class="legend-title">● 建筑类别图例</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-gate)"></div>校门</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-teaching)"></div>教学楼</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-dorm)"></div>学生宿舍</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-facility)"></div>生活设施</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-admin)"></div>行政/科研</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-junction); border-radius:50%"></div>路口节点</div>
+    </div>
+
+    <!-- 最短路径 -->
+    <div class="section open" id="sec-path">
+      <div class="section-header" onclick="toggleSection('sec-path')">
+        <span class="icon">🗺</span>
+        <span class="label">最短路径查询</span>
+        <span class="arrow">▶</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>起点</label>
+          <input id="path-from" type="text" placeholder="输入建筑名称" list="node-list">
+        </div>
+        <div class="field">
+          <label>终点</label>
+          <input id="path-to" type="text" placeholder="输入建筑名称" list="node-list">
+        </div>
+        <datalist id="node-list"></datalist>
+        <button class="btn btn-primary btn-full" onclick="queryPath()">▶ 查询最短路径</button>
+        <div id="result-box">请输入起点和终点后点击查询</div>
+      </div>
+    </div>
+
+    <!-- 遍历 -->
+    <div class="section" id="sec-traverse">
+      <div class="section-header" onclick="toggleSection('sec-traverse')">
+        <span class="icon">🔁</span>
+        <span class="label">遍历校园</span>
+        <span class="arrow">▶</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>起点</label>
+          <input id="trav-start" type="text" placeholder="输入建筑名称" list="node-list">
+        </div>
+        <div class="field">
+          <label>遍历方式</label>
+          <select id="trav-method">
+            <option value="bfs">BFS 广度优先</option>
+            <option value="dfs">DFS 深度优先</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-success btn-full" onclick="queryTraverse()">▶ 开始遍历</button>
+          <button class="btn btn-full" onclick="clearHighlight()">✕ 清除</button>
+        </div>
+        <div id="traverse-result" style="font-size:11px;color:var(--text-dim);line-height:1.8;"></div>
+      </div>
+    </div>
+
+    <!-- 添加建筑 -->
+    <div class="section" id="sec-add-node">
+      <div class="section-header" onclick="toggleSection('sec-add-node')">
+        <span class="icon">＋</span>
+        <span class="label">添加建筑</span>
+        <span class="arrow">▶</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>建筑名称</label>
+          <input id="new-node-name" type="text" placeholder="例：新图书馆">
+        </div>
+        <div class="field">
+          <label>类别</label>
+          <select id="new-node-cat">
+            <option value="teaching">教学楼</option>
+            <option value="dorm">学生宿舍</option>
+            <option value="facility">生活设施</option>
+            <option value="admin">行政/科研</option>
+            <option value="gate">校门</option>
+            <option value="junction">路口节点</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim)">📍 坐标：在地图上 <b style="color:var(--accent)">右键单击</b> 选取位置</div>
+        <div class="field">
+          <label>X 坐标</label>
+          <input id="new-node-x" type="number" placeholder="点击地图自动填入">
+        </div>
+        <div class="field">
+          <label>Y 坐标</label>
+          <input id="new-node-y" type="number" placeholder="点击地图自动填入">
+        </div>
+        <button class="btn btn-success btn-full" onclick="addNode()">＋ 添加建筑</button>
+      </div>
+    </div>
+
+    <!-- 删除建筑 -->
+    <div class="section" id="sec-del-node">
+      <div class="section-header" onclick="toggleSection('sec-del-node')">
+        <span class="icon">🗑</span>
+        <span class="label">删除建筑</span>
+        <span class="arrow">▶</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>建筑名称</label>
+          <input id="del-node-name" type="text" placeholder="输入建筑名称" list="node-list">
+        </div>
+        <button class="btn btn-danger btn-full" onclick="deleteNode()">🗑 删除建筑及相关道路</button>
+      </div>
+    </div>
+
+    <!-- 添加道路 -->
+    <div class="section" id="sec-add-edge">
+      <div class="section-header" onclick="toggleSection('sec-add-edge')">
+        <span class="icon">＋</span>
+        <span class="label">添加道路</span>
+        <span class="arrow">▶</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>建筑 A</label>
+          <input id="new-edge-u" type="text" placeholder="输入建筑名称" list="node-list">
+        </div>
+        <div class="field">
+          <label>建筑 B</label>
+          <input id="new-edge-v" type="text" placeholder="输入建筑名称" list="node-list">
+        </div>
+        <div class="field">
+          <label>距离（米）</label>
+          <input id="new-edge-d" type="number" placeholder="例：150" min="1">
+        </div>
+        <button class="btn btn-success btn-full" onclick="addEdge()">＋ 添加道路</button>
+      </div>
+    </div>
+
+    <!-- 删除道路 -->
+    <div class="section" id="sec-del-edge">
+      <div class="section-header" onclick="toggleSection('sec-del-edge')">
+        <span class="icon">🗑</span>
+        <span class="label">删除道路</span>
+        <span class="arrow">▶</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>建筑 A</label>
+          <input id="del-edge-u" type="text" placeholder="输入建筑名称" list="node-list">
+        </div>
+        <div class="field">
+          <label>建筑 B</label>
+          <input id="del-edge-v" type="text" placeholder="输入建筑名称" list="node-list">
+        </div>
+        <button class="btn btn-danger btn-full" onclick="deleteEdge()">🗑 删除道路</button>
+      </div>
+    </div>
+
+  </div><!-- end #panel -->
+
+  <!-- 右侧地图 -->
+  <div id="map-area">
+    <canvas id="canvas"></canvas>
+    <div id="tooltip"></div>
+    <div id="map-controls">
+      <div class="map-ctrl-btn" onclick="zoom(1.2)" title="放大">＋</div>
+      <div class="map-ctrl-btn" onclick="zoom(0.8)" title="缩小">－</div>
+      <div class="map-ctrl-btn" onclick="resetView()" title="重置视图">⊙</div>
+    </div>
+  </div>
+
+</div><!-- end #layout -->
+
+<script>
+// ============================================================
+//  全局状态（DOM 元素在 load 后赋值）
+// ============================================================
+let canvas, ctx, tooltip, mapArea;
+
+let graphData   = { nodes: {}, edges: [] };
+let highlighted = [];        // 最短路径高亮的节点列表
+let traverseOrder = [];      // 遍历顺序（用于动画）
+let traverseTimer = null;    // 遍历动画定时器
+let visitedSet  = new Set(); // 遍历动画已访问集合
+
+// 视图变换
+let viewX = 0, viewY = 0, viewScale = 1;
+let dragging = false, dragStartX, dragStartY, viewStartX, viewStartY;
+
+// 右键选坐标模式
+let pickingCoord = false;
+
+// 流光动画
+let flowOffset = 0;
+
+// 建筑类别颜色映射
+const CAT_COLOR = {
+  gate:     '#ffb300',
+  teaching: '#00c8ff',
+  dorm:     '#00e5a0',
+  facility: '#ff7043',
+  admin:    '#b388ff',
+  junction: '#334455',
+  other:    '#778899',
+};
+
+// ============================================================
+//  初始化
+// ============================================================
+window.addEventListener('load', async () => {
+  // 在 load 事件后获取 DOM，确保元素存在
+  canvas  = document.getElementById('canvas');
+  ctx     = canvas.getContext('2d');
+  tooltip = document.getElementById('tooltip');
+  mapArea = document.getElementById('map-area');
+  resizeCanvas();
+  await loadGraph();
+  startRenderLoop();
+});
+
+window.addEventListener('resize', () => { resizeCanvas(); draw(); });
+
+function resizeCanvas() {
+  const rect = mapArea.getBoundingClientRect();
+  canvas.width  = rect.width;
+  canvas.height = rect.height;
+}
+
+// ============================================================
+//  API 调用
+// ============================================================
+async function api(method, path, body = null) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  return res.json();
+}
+
+async function loadGraph() {
+  const res = await api('GET', '/api/graph');
+  if (res.status === 'ok') {
+    graphData = res.data;
+    updateDatalist();
+    updateStatusBar();
+    resetView();
+  }
+}
+
+function updateDatalist() {
+  const dl = document.getElementById('node-list');
+  dl.innerHTML = '';
+  for (const name of Object.keys(graphData.nodes)) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    dl.appendChild(opt);
+  }
+}
+
+function updateStatusBar() {
+  const nc = Object.keys(graphData.nodes).length;
+  const ec = graphData.edges.length;
+  document.getElementById('stat-nodes').textContent = `建筑: ${nc}`;
+  document.getElementById('stat-edges').textContent = `道路: ${ec}`;
+  // 简单本地判断连通性（显示用）
+  document.getElementById('stat-conn').textContent =
+    nc > 0 ? '全图连通 ✓' : '--';
+}
+
+// ============================================================
+//  视图控制
+// ============================================================
+function resetView() {
+  // 自动居中：把图数据的中心对准 canvas 中心
+  const names = Object.keys(graphData.nodes);
+  if (names.length === 0) return;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const n of names) {
+    const {x, y} = graphData.nodes[n];
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+  }
+  const dataW = maxX - minX || 1, dataH = maxY - minY || 1;
+  const padding = 0.82;  // 留边比例，越大节点越铺满画布
+  const scaleX = (canvas.width  * padding) / dataW;
+  const scaleY = (canvas.height * padding) / dataH;
+  viewScale = Math.min(scaleX, scaleY);  // 去掉 1.2 上限，完全自适应
+  viewX = canvas.width  / 2 - ((minX + maxX) / 2) * viewScale;
+  viewY = canvas.height / 2 - ((minY + maxY) / 2) * viewScale;
+  draw();
+}
+
+function zoom(factor) {
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  viewX = cx - (cx - viewX) * factor;
+  viewY = cy - (cy - viewY) * factor;
+  viewScale *= factor;
+  draw();
+}
+
+// 坐标转换：canvas px → 数据坐标
+function canvasToData(cx, cy) {
+  return { x: (cx - viewX) / viewScale, y: (cy - viewY) / viewScale };
+}
+
+// 数据坐标 → canvas px
+function dataToCanvas(dx, dy) {
+  return { x: dx * viewScale + viewX, y: dy * viewScale + viewY };
+}
+
+// ============================================================
+//  鼠标事件：拖拽 + tooltip + 右键选坐标
+// ============================================================
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 0) {
+    dragging = true;
+    canvas.classList.add('grabbing');
+    dragStartX = e.clientX; dragStartY = e.clientY;
+    viewStartX = viewX;     viewStartY = viewY;
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (dragging) {
+    viewX = viewStartX + (e.clientX - dragStartX);
+    viewY = viewStartY + (e.clientY - dragStartY);
+    draw();
+    return;
+  }
+  // Tooltip：检测悬停节点
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const hovered = getNodeAt(mx, my);
+  if (hovered) {
+    const node = graphData.nodes[hovered];
+    const neighborNames = graphData.edges
+      .filter(e => e.from === hovered || e.to === hovered)
+      .map(e => e.from === hovered ? e.to : e.from);
+    tooltip.innerHTML =
+      `<b style="color:var(--accent)">${hovered}</b><br>` +
+      `类别: ${node.category || '-'}<br>` +
+      `相邻: ${neighborNames.join('、') || '无'}`;
+    tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+    tooltip.style.top  = (e.clientY - rect.top  - 10) + 'px';
+    tooltip.classList.add('show');
+  } else {
+    tooltip.classList.remove('show');
+  }
+});
+
+canvas.addEventListener('mouseup',   () => { dragging = false; canvas.classList.remove('grabbing'); });
+canvas.addEventListener('mouseleave',() => { dragging = false; canvas.classList.remove('grabbing'); tooltip.classList.remove('show'); });
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  viewX = mx - (mx - viewX) * factor;
+  viewY = my - (my - viewY) * factor;
+  viewScale *= factor;
+  draw();
+}, { passive: false });
+
+// 右键：选取坐标（用于添加建筑）
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const {x, y} = canvasToData(e.clientX - rect.left, e.clientY - rect.top);
+  document.getElementById('new-node-x').value = Math.round(x);
+  document.getElementById('new-node-y').value = Math.round(y);
+  // 自动打开添加建筑面板
+  const sec = document.getElementById('sec-add-node');
+  if (!sec.classList.contains('open')) toggleSection('sec-add-node');
+  showToast(`📍 坐标已选取：(${Math.round(x)}, ${Math.round(y)})`);
+});
+
+// ============================================================
+//  命中检测：找鼠标下的节点
+// ============================================================
+function getNodeAt(mx, my) {
+  for (const [name, node] of Object.entries(graphData.nodes)) {
+    const {x, y} = dataToCanvas(node.x, node.y);
+    const r = node.category === 'junction' ? 5 : 10;
+    if (Math.hypot(mx - x, my - y) < r + 4) return name;
+  }
+  return null;
+}
+
+// ============================================================
+//  渲染循环
+// ============================================================
+function startRenderLoop() {
+  function loop() {
+    flowOffset = (flowOffset + 0.5) % 30;
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawEdges();
+  drawNodes();
+}
+
+// ---- 绘制边 ----
+function drawEdges() {
+  const pathSet = new Set();
+  for (let i = 0; i < highlighted.length - 1; i++) {
+    pathSet.add(edgeKey(highlighted[i], highlighted[i+1]));
+  }
+
+  for (const edge of graphData.edges) {
+    const uNode = graphData.nodes[edge.from];
+    const vNode = graphData.nodes[edge.to];
+    if (!uNode || !vNode) continue;
+
+    const u = dataToCanvas(uNode.x, uNode.y);
+    const v = dataToCanvas(vNode.x, vNode.y);
+    const isPath = pathSet.has(edgeKey(edge.from, edge.to));
+
+    if (isPath) {
+      // 流光效果
+      ctx.save();
+      ctx.strokeStyle = '#00c8ff';
+      ctx.lineWidth   = 3.5;
+      ctx.shadowColor = '#00c8ff';
+      ctx.shadowBlur  = 12;
+      ctx.setLineDash([12, 8]);
+      ctx.lineDashOffset = -flowOffset;
+      ctx.beginPath();
+      ctx.moveTo(u.x, u.y);
+      ctx.lineTo(v.x, v.y);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.strokeStyle = '#1a3a5c';
+      ctx.lineWidth   = 1.5;
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(u.x, u.y);
+      ctx.lineTo(v.x, v.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 边距离标签（缩放够大时显示）
+    if (viewScale > 0.3) {
+      const mx = (u.x + v.x) / 2, my = (u.y + v.y) / 2;
+      ctx.save();
+      ctx.font = `${Math.max(9, 10 * viewScale)}px Orbitron, monospace`;
+      ctx.fillStyle = isPath ? '#005577' : '#1e3d5a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(edge.distance + 'm', mx, my - 6);
+      ctx.restore();
+    }
+  }
+}
+
+// ---- 绘制节点 ----
+function drawNodes() {
+  const pathSet = new Set(highlighted);
+  const visitSet = visitedSet;
+
+  for (const [name, node] of Object.entries(graphData.nodes)) {
+    const {x, y} = dataToCanvas(node.x, node.y);
+    const isJunction = node.category === 'junction';
+    const inPath     = pathSet.has(name);
+    const inVisit    = visitSet.has(name);
+    const r = isJunction ? 4 : 8;
+
+    ctx.save();
+
+    if (inPath) {
+      // 路径节点：亮色光晕
+      ctx.shadowColor = '#00c8ff';
+      ctx.shadowBlur  = 20;
+    } else if (inVisit) {
+      ctx.shadowColor = '#00e5a0';
+      ctx.shadowBlur  = 14;
+    }
+
+    ctx.beginPath();
+    if (isJunction) {
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+    } else {
+      // 圆角矩形
+      const s = r * 1.6;
+      roundRect(ctx, x - s/2, y - s/2, s, s, 3);
+    }
+
+    // 填充颜色
+    let color = CAT_COLOR[node.category] || CAT_COLOR.other;
+    if (inPath) {
+      ctx.fillStyle = '#00c8ff';
+    } else if (inVisit) {
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.85;
+    } else {
+      ctx.fillStyle = color;
+      ctx.globalAlpha = isJunction ? 0.5 : 0.9;
+    }
+    ctx.fill();
+
+    // 描边
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = inPath ? '#fff' : 'rgba(255,255,255,0.15)';
+    ctx.lineWidth   = inPath ? 1.5 : 1;
+    ctx.stroke();
+
+    ctx.restore();
+
+    // 文字标签（非路口节点才显示）
+    if (!isJunction && viewScale > 0.15) {
+      ctx.save();
+      const fontSize = Math.max(8, Math.min(14, 12 * viewScale));
+      ctx.font = `${inPath ? 'bold' : 'normal'} ${fontSize}px Noto Sans SC, sans-serif`;
+      ctx.fillStyle  = inPath ? '#ffffff' : 'rgba(180,220,255,0.85)';
+      ctx.textAlign  = 'center';
+      ctx.textBaseline = 'top';
+      ctx.shadowColor = '#000';
+      ctx.shadowBlur  = 4;
+      ctx.fillText(name, x, y + r * 1.4);
+      ctx.restore();
+    }
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function edgeKey(u, v) {
+  return u < v ? `${u}|${v}` : `${v}|${u}`;
+}
+
+// ============================================================
+//  功能：最短路径
+// ============================================================
+async function queryPath() {
+  clearHighlight();
+  const from = document.getElementById('path-from').value.trim();
+  const to   = document.getElementById('path-to').value.trim();
+  if (!from || !to) { showResult('请填写起点和终点', 'error'); return; }
+
+  const res = await api('GET', `/api/shortest_path?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+
+  if (res.status === 'ok') {
+    const { path, distance, steps } = res.data;
+    highlighted = path;
+
+    // 过滤掉路口节点后用于展示
+    const displayPath = path.filter(n => graphData.nodes[n]?.category !== 'junction');
+
+    let html = `<span class="result-path">`;
+    html += displayPath.join(' → ');
+    html += `</span>\n`;
+    html += `<span class="result-dist">总距离：${distance} 米 | 经过 ${path.length - 1} 段</span>\n\n`;
+    html += `分段明细：\n`;
+    steps.forEach((s, i) => {
+      html += `  ${i+1}. ${s.from} → ${s.to}：${s.distance}m\n`;
+    });
+    document.getElementById('result-box').innerHTML = html;
+  } else {
+    showResult(res.message, 'error');
+    highlighted = [];
+  }
+  draw();
+}
+
+function showResult(msg, type = 'ok') {
+  const box = document.getElementById('result-box');
+  box.innerHTML = `<span class="result-${type}">${msg}</span>`;
+}
+
+// ============================================================
+//  功能：遍历
+// ============================================================
+async function queryTraverse() {
+  clearHighlight();
+  const start  = document.getElementById('trav-start').value.trim();
+  const method = document.getElementById('trav-method').value;
+  if (!start) { showToast('请填写起点', 'error'); return; }
+
+  const res = await api('GET', `/api/traverse?start=${encodeURIComponent(start)}&method=${method}`);
+  if (res.status !== 'ok') { showToast(res.message, 'error'); return; }
+
+  traverseOrder = res.data.order;
+  visitedSet.clear();
+  let i = 0;
+
+  const resultEl = document.getElementById('traverse-result');
+  resultEl.textContent = '';
+
+  if (traverseTimer) clearInterval(traverseTimer);
+
+  traverseTimer = setInterval(() => {
+    if (i >= traverseOrder.length) { clearInterval(traverseTimer); return; }
+    const name = traverseOrder[i];
+    visitedSet.add(name);
+    resultEl.textContent = traverseOrder.slice(0, i + 1).join(' → ');
+    i++;
+    draw();
+  }, 200);
+
+  showToast(`${method.toUpperCase()} 遍历开始，共 ${traverseOrder.length} 个建筑`);
+}
+
+function clearHighlight() {
+  highlighted = [];
+  visitedSet.clear();
+  traverseOrder = [];
+  if (traverseTimer) { clearInterval(traverseTimer); traverseTimer = null; }
+  document.getElementById('traverse-result').textContent = '';
+  draw();
+}
+
+// ============================================================
+//  功能：添加建筑
+// ============================================================
+async function addNode() {
+  const name = document.getElementById('new-node-name').value.trim();
+  const cat  = document.getElementById('new-node-cat').value;
+  const x    = parseFloat(document.getElementById('new-node-x').value);
+  const y    = parseFloat(document.getElementById('new-node-y').value);
+
+  if (!name)       { showToast('请输入建筑名称', 'error'); return; }
+  if (isNaN(x) || isNaN(y)) { showToast('请先在地图上右键选取坐标', 'error'); return; }
+
+  const res = await api('POST', '/api/node', { name, x, y, category: cat });
+  if (res.status === 'ok') {
+    showToast(`✓ ${res.message}`);
+    document.getElementById('new-node-name').value = '';
+    document.getElementById('new-node-x').value = '';
+    document.getElementById('new-node-y').value = '';
+    await loadGraph();
+  } else {
+    showToast(`✗ ${res.message}`, 'error');
+  }
+}
+
+// ============================================================
+//  功能：删除建筑
+// ============================================================
+async function deleteNode() {
+  const name = document.getElementById('del-node-name').value.trim();
+  if (!name) { showToast('请输入建筑名称', 'error'); return; }
+
+  const res = await api('DELETE', `/api/node/${encodeURIComponent(name)}`);
+  if (res.status === 'ok') {
+    showToast(`✓ ${res.message}`);
+    document.getElementById('del-node-name').value = '';
+    clearHighlight();
+    await loadGraph();
+  } else {
+    showToast(`✗ ${res.message}`, 'error');
+  }
+}
+
+// ============================================================
+//  功能：添加道路
+// ============================================================
+async function addEdge() {
+  const u = document.getElementById('new-edge-u').value.trim();
+  const v = document.getElementById('new-edge-v').value.trim();
+  const d = parseFloat(document.getElementById('new-edge-d').value);
+
+  if (!u || !v)  { showToast('请填写两端建筑名称', 'error'); return; }
+  if (isNaN(d) || d <= 0) { showToast('请填写有效距离（正数）', 'error'); return; }
+
+  const res = await api('POST', '/api/edge', { from: u, to: v, distance: d });
+  if (res.status === 'ok') {
+    showToast(`✓ ${res.message}`);
+    document.getElementById('new-edge-u').value = '';
+    document.getElementById('new-edge-v').value = '';
+    document.getElementById('new-edge-d').value = '';
+    await loadGraph();
+  } else {
+    showToast(`✗ ${res.message}`, 'error');
+  }
+}
+
+// ============================================================
+//  功能：删除道路
+// ============================================================
+async function deleteEdge() {
+  const u = document.getElementById('del-edge-u').value.trim();
+  const v = document.getElementById('del-edge-v').value.trim();
+  if (!u || !v) { showToast('请填写两端建筑名称', 'error'); return; }
+
+  const res = await api('DELETE', `/api/edge/${encodeURIComponent(u)}/${encodeURIComponent(v)}`);
+  if (res.status === 'ok') {
+    showToast(`✓ ${res.message}`);
+    document.getElementById('del-edge-u').value = '';
+    document.getElementById('del-edge-v').value = '';
+    clearHighlight();
+    await loadGraph();
+  } else {
+    showToast(`✗ ${res.message}`, 'error');
+  }
+}
+
+// ============================================================
+//  UI 工具
+// ============================================================
+function toggleSection(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+let toastTimer = null;
+function showToast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.color = type === 'error' ? 'var(--danger)' : 'var(--accent)';
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
