@@ -618,17 +618,29 @@ const CAT_COLOR = {
 //  初始化
 // ============================================================
 window.addEventListener('load', async () => {
-  // 在 load 事件后获取 DOM，确保元素存在
+  // 1. 获取 DOM，确保元素存在
   canvas  = document.getElementById('canvas');
   ctx     = canvas.getContext('2d');
   tooltip = document.getElementById('tooltip');
   mapArea = document.getElementById('map-area');
+
+  // 2. 初始调用一次，确保后面 loadGraph 里的 resetView() 能拿到正确的容器宽高
   resizeCanvas();
+
+  // 3. 引入 ResizeObserver 监听地图容器的实际尺寸变化
+  const observer = new ResizeObserver(() => {
+    resizeCanvas();
+    draw(); // 如果你希望窗口改变时画面自动居中，这里可以换成 resetView()
+  });
+  // 开始观测 mapArea 容器
+  observer.observe(mapArea);
+
+  // 4. 加载数据并启动渲染循环
   await loadGraph();
   startRenderLoop();
 });
 
-window.addEventListener('resize', () => { resizeCanvas(); draw(); });
+//window.addEventListener('resize', () => { resizeCanvas(); draw(); });
 
 // 1. 新增两个全局变量，用于记录逻辑视口尺寸
 let cssWidth = 0, cssHeight = 0;
@@ -741,10 +753,13 @@ function dataToCanvas(dx, dy) {
 // ============================================================
 canvas.addEventListener('mousedown', e => {
   if (e.button === 0) {
+    e.preventDefault(); // <--- 加上这一行！强制拦截浏览器默认行为
     dragging = true;
     canvas.classList.add('grabbing');
-    dragStartX = e.clientX; dragStartY = e.clientY;
-    viewStartX = viewX;     viewStartY = viewY;
+    dragStartX = e.clientX; 
+    dragStartY = e.clientY;
+    viewStartX = viewX;     
+    viewStartY = viewY;
   }
 });
 
@@ -828,7 +843,14 @@ function startRenderLoop() {
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // === 彻底清除画布残影的核心代码 ===
+  ctx.save();                           // 1. 保存当前的绘图状态（比如 dpr 带来的缩放）
+  ctx.setTransform(1, 0, 0, 1, 0, 0);   // 2. 强制将坐标系矩阵重置为原始的 1:1 状态
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // 3. 精准清除整个物理画布
+  ctx.restore();                        // 4. 恢复之前的绘图状态，继续后面的绘制
+  // ===================================
+
+  // 继续原有的绘制逻辑
   drawEdges();
   drawNodes();
 }
