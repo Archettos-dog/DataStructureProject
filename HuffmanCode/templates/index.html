@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>哈夫曼编码 · 可视化工具</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #1a1814; --ink2: #4a4640; --ink3: #8a8480;
+    --paper: #f5f2ee; --paper2: #ede9e3; --paper3: #e4dfd8;
+    --accent: #c84b2f; --accent2: #e8956a;
+    --green: #2d7a4f; --green2: #4aad77;
+    --purple: #534AB7;
+    --border: rgba(26,24,20,0.12);
+    --r: 10px;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
+
+  /* Header */
+  header { padding: 2.5rem 3rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 1.5rem; }
+  header h1 { font-family: 'Noto Serif SC', serif; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; }
+  header span { font-size: 0.8rem; color: var(--ink3); font-weight: 300; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* Stepper */
+  .stepper { display: flex; padding: 0 3rem; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 10; }
+  .step-btn { padding: 1rem 1.5rem; border: none; background: none; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 400; color: var(--ink3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .2s, border-color .2s; white-space: nowrap; }
+  .step-btn:disabled { opacity: .35; cursor: default; }
+  .step-btn.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
+  .step-btn:not(:disabled):not(.active):hover { color: var(--ink2); }
+
+  main { padding: 2.5rem 3rem; max-width: 1000px; }
+
+  /* Panel */
+  .panel { display: none; animation: fadeUp .3s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  /* Upload */
+  .upload-zone { border: 1.5px dashed var(--paper3); border-radius: var(--r); padding: 4rem 2rem; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; background: var(--paper2); margin-bottom: 1.25rem; }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent2); background: #faf6f1; }
+  .upload-icon { width: 36px; height: 36px; margin: 0 auto 1rem; color: var(--ink3); }
+  .upload-zone p { font-size: .9rem; color: var(--ink2); margin-bottom: .3rem; }
+  .upload-zone small { font-size: .75rem; color: var(--ink3); }
+  #file-input { display: none; }
+
+  .sample-btns { display: flex; gap: .75rem; flex-wrap: wrap; }
+  .btn-outline { padding: .55rem 1.1rem; border: 1px solid var(--border); border-radius: 6px; background: none; font-family: 'DM Sans', sans-serif; font-size: .8rem; color: var(--ink2); cursor: pointer; transition: all .15s; }
+  .btn-outline:hover { background: var(--paper2); border-color: var(--ink3); color: var(--ink); }
+
+  /* File card */
+  .file-card { background: var(--paper2); border: 1px solid var(--border); border-radius: var(--r); padding: 1.25rem 1.5rem; margin-top: 1.25rem; display: none; align-items: center; gap: 1rem; }
+  .file-card.show { display: flex; }
+  .file-icon { width: 38px; height: 38px; background: var(--paper3); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+  .file-info { flex: 1; }
+  .file-name { font-size: .9rem; font-weight: 500; margin-bottom: 2px; }
+  .file-meta { font-size: .75rem; color: var(--ink3); }
+  .tag-ok { font-size: .7rem; padding: 3px 8px; background: #e6f4ec; color: var(--green); border-radius: 20px; font-weight: 500; }
+  .tag-err { font-size: .7rem; padding: 3px 8px; background: #fde8e4; color: var(--accent); border-radius: 20px; font-weight: 500; }
+
+  /* Buttons */
+  .btn-run { padding: .6rem 1.4rem; background: var(--ink); color: var(--paper); border: none; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: .82rem; font-weight: 500; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
+  .btn-run:hover { opacity: .82; }
+  .btn-run:disabled { opacity: .4; cursor: default; }
+
+  /* Text preview */
+  .text-preview { background: var(--paper2); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; font-family: 'JetBrains Mono', monospace; font-size: .75rem; color: var(--ink3); line-height: 1.7; margin-top: 1rem; max-height: 80px; overflow: hidden; display: none; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.75rem; }
+  .metric-card { background: var(--paper2); border-radius: var(--r); padding: 1.25rem 1.5rem; border: 1px solid var(--border); }
+  .metric-val { font-size: 1.9rem; font-weight: 300; letter-spacing: -.03em; margin-bottom: .25rem; }
+  .metric-label { font-size: .72rem; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; }
+
+  /* Freq bars */
+  .section-label { font-size: .72rem; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1rem; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+  .bar-char { font-family: 'JetBrains Mono', monospace; font-size: .78rem; width: 28px; text-align: center; color: var(--ink2); flex-shrink: 0; }
+  .bar-track { flex: 1; height: 7px; background: var(--paper3); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--purple); border-radius: 4px; transition: width .6s cubic-bezier(.16,1,.3,1); width: 0; }
+  .bar-count { font-size: .72rem; color: var(--ink3); width: 72px; text-align: right; flex-shrink: 0; }
+
+  /* Code table */
+  .hint { font-size: .8rem; color: var(--ink3); margin-bottom: 1.25rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+  thead th { text-align: left; padding: .5rem .75rem; font-size: .7rem; font-weight: 500; color: var(--ink3); text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+  tbody td { padding: .6rem .75rem; border-bottom: 1px solid rgba(26,24,20,.05); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--paper2); }
+  .code-mono { font-family: 'JetBrains Mono', monospace; font-size: .78rem; color: var(--green); letter-spacing: .05em; }
+  .char-mono { font-family: 'JetBrains Mono', monospace; font-size: .82rem; }
+
+  /* Result */
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  .result-card { background: var(--paper2); border: 1px solid var(--border); border-radius: var(--r); padding: 1.25rem 1.5rem; text-align: center; }
+  .result-val { font-size: 1.75rem; font-weight: 300; letter-spacing: -.03em; margin-bottom: .2rem; }
+  .result-val.highlight { color: var(--green); font-weight: 400; }
+  .result-label { font-size: .7rem; color: var(--ink3); text-transform: uppercase; letter-spacing: .06em; }
+  .compare-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .compare-label { font-size: .75rem; color: var(--ink3); width: 48px; flex-shrink: 0; }
+  .compare-track { flex: 1; height: 10px; background: var(--paper3); border-radius: 5px; overflow: hidden; }
+  .compare-fill { height: 100%; border-radius: 5px; transition: width .8s cubic-bezier(.16,1,.3,1); width: 0; }
+  .fill-gray { background: var(--ink3); }
+  .fill-green { background: var(--green2); }
+  .compare-num { font-size: .75rem; color: var(--ink2); width: 44px; text-align: right; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
+  .footnote { font-size: .73rem; color: var(--ink3); border-top: 1px solid var(--border); padding-top: .85rem; margin-top: .85rem; }
+
+  /* Loading / Error */
+  .loading { display: none; align-items: center; gap: .75rem; color: var(--ink3); font-size: .85rem; padding: 2rem 0; }
+  .loading.show { display: flex; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--paper3); border-top-color: var(--purple); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-msg { display: none; background: #fde8e4; border: 1px solid #f5c0b4; border-radius: 8px; padding: .85rem 1rem; font-size: .82rem; color: var(--accent); margin-top: 1rem; }
+  .error-msg.show { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>哈夫曼编码</h1>
+  <span>Huffman Coding · 可视化工具</span>
+</header>
+
+<nav class="stepper">
+  <button class="step-btn active" id="pill-0" onclick="goPanel(0)">1. 上传文件</button>
+  <button class="step-btn" id="pill-1" onclick="goPanel(1)" disabled>2. 字符频率</button>
+  <button class="step-btn" id="pill-2" onclick="goPanel(2)" disabled>3. 哈夫曼编码</button>
+  <button class="step-btn" id="pill-3" onclick="goPanel(3)" disabled>4. 压缩结果</button>
+</nav>
+
+<main>
+
+  <!-- Panel 0：上传 -->
+  <div class="panel active" id="panel-0">
+    <input type="file" id="file-input" accept=".txt">
+
+    <div class="upload-zone" id="upload-zone"
+         onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>点击上传 .txt 文件</p>
+      <small>支持中文、英文及标点符号 · 或将文件拖拽到此处</small>
+    </div>
+
+    <div class="sample-btns">
+      <button class="btn-outline" onclick="loadSample('en')">载入英文示例</button>
+      <button class="btn-outline" onclick="loadSample('zh')">载入中文示例</button>
+      <button class="btn-outline" onclick="loadSample('mixed')">载入中英混合示例</button>
+    </div>
+
+    <div id="text-preview" class="text-preview"></div>
+
+    <div class="file-card" id="file-card">
+      <div class="file-icon">📄</div>
+      <div class="file-info">
+        <div class="file-name" id="fc-name">—</div>
+        <div class="file-meta" id="fc-meta">—</div>
+      </div>
+      <span class="tag-ok" id="fc-tag">已加载</span>
+      <button class="btn-run" id="btn-run" onclick="runAnalysis()">开始分析 →</button>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <span>Python 正在计算哈夫曼编码…</span>
+    </div>
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+
+  <!-- Panel 1：字符频率 -->
+  <div class="panel" id="panel-1">
+    <div class="metrics">
+      <div class="metric-card"><div class="metric-val" id="m-total">—</div><div class="metric-label">总字符数</div></div>
+      <div class="metric-card"><div class="metric-val" id="m-unique">—</div><div class="metric-label">不同字符种数</div></div>
+      <div class="metric-card"><div class="metric-val" id="m-size">—</div><div class="metric-label">原始大小</div></div>
+    </div>
+    <div class="section-label">出现频率最高的字符</div>
+    <div id="freq-bars"></div>
+  </div>
+
+  <!-- Panel 2：编码表 -->
+  <div class="panel" id="panel-2">
+    <p class="hint">频率越高的字符，编码越短。以下数据由 Python utils.py 实时计算。</p>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>字符</th><th>频率</th><th>频率占比</th>
+            <th>哈夫曼编码</th><th>编码长度</th>
+          </tr>
+        </thead>
+        <tbody id="code-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Panel 3：压缩结果 -->
+  <div class="panel" id="panel-3">
+    <div class="result-grid">
+      <div class="result-card"><div class="result-val" id="r-orig">—</div><div class="result-label">压缩前大小</div></div>
+      <div class="result-card"><div class="result-val" id="r-comp">—</div><div class="result-label">压缩后大小</div></div>
+      <div class="result-card"><div class="result-val highlight" id="r-ratio">—</div><div class="result-label">压缩率</div></div>
+      <div class="result-card"><div class="result-val" id="r-avg">—</div><div class="result-label">平均编码长度</div></div>
+    </div>
+    <div class="section-label">文件大小对比</div>
+    <div class="compare-row">
+      <span class="compare-label">压缩前</span>
+      <div class="compare-track"><div class="compare-fill fill-gray" id="bar-orig" style="width:100%"></div></div>
+      <span class="compare-num" id="bar-orig-num">—</span>
+    </div>
+    <div class="compare-row">
+      <span class="compare-label">压缩后</span>
+      <div class="compare-track"><div class="compare-fill fill-green" id="bar-comp" style="width:0%"></div></div>
+      <span class="compare-num" id="bar-comp-num">—</span>
+    </div>
+    <div class="footnote">注：实际压缩文件还需存储编码表，整体大小会略有增加。算法由 Python utils.py 提供。</div>
+  </div>
+
+</main>
+
+<script>
+// ── 示例文本 ──────────────────────────────────
+const SAMPLES = {
+  en: { name: 'english_sample.txt',
+        text: 'the quick brown fox jumps over the lazy dog. a fox is a sly animal. the dog barked loudly at the fox. both animals ran through the forest at high speed.' },
+  zh: { name: 'chinese_sample.txt',
+        text: '数据结构是计算机存储、组织数据的方式。选择适当的数据结构可以提高算法效率。哈夫曼编码是一种贪心算法，广泛应用于数据压缩领域。压缩率越高，存储空间越节省。' },
+  mixed: { name: 'mixed_sample.txt',
+           text: 'Huffman(哈夫曼)编码利用字符频率构建最优二叉树，实现无损压缩(lossless compression)。压缩率通常可达30%-50%。该算法由David Huffman于1952年提出。' }
+};
+
+let currentText = '';
+
+// ── 工具函数 ──────────────────────────────────
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(2) + ' MB';
+}
+
+function goPanel(n) {
+  document.querySelectorAll('.panel').forEach((p, i) => p.classList.toggle('active', i === n));
+  document.querySelectorAll('.step-btn').forEach((b, i) => b.classList.toggle('active', i === n));
+}
+
+function setLoading(on) {
+  document.getElementById('loading').classList.toggle('show', on);
+  document.getElementById('btn-run').disabled = on;
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function clearError() {
+  document.getElementById('error-msg').classList.remove('show');
+}
+
+// ── 文件加载 ──────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => setFile(file.name, ev.target.result);
+  reader.readAsText(file, 'utf-8');
+});
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.name.endsWith('.txt')) { showError('请上传 .txt 格式的文件'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => setFile(file.name, ev.target.result);
+  reader.readAsText(file, 'utf-8');
+}
+
+function loadSample(type) {
+  const s = SAMPLES[type];
+  setFile(s.name, s.text);
+}
+
+function setFile(name, text) {
+  clearError();
+  currentText = text;
+  const bytes = new TextEncoder().encode(text).length;
+
+  document.getElementById('fc-name').textContent = name;
+  document.getElementById('fc-meta').textContent = `${text.length} 字符 · ${fmtSize(bytes)}`;
+  document.getElementById('file-card').classList.add('show');
+
+  const preview = document.getElementById('text-preview');
+  preview.textContent = text.slice(0, 120) + (text.length > 120 ? '…' : '');
+  preview.style.display = 'block';
+}
+
+// ── 调用 Python 后端 ──────────────────────────
+async function runAnalysis() {
+  if (!currentText) return;
+  clearError();
+  setLoading(true);
+
+  try {
+    // POST 文本到 Flask 的 /api/analyze
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: currentText })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showError('服务器错误：' + (data.error || res.statusText));
+      return;
+    }
+
+    // 渲染三个面板
+    renderFreq(data);
+    renderCodes(data);
+    renderResult(data);
+
+    // 解锁步骤按钮
+    document.querySelectorAll('.step-btn').forEach(b => b.disabled = false);
+    goPanel(1);
+
+  } catch (err) {
+    showError('无法连接到 Python 服务器，请确认已运行 python src/app.py（错误：' + err.message + '）');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── Panel 1：频率 ──────────────────────────────
+function renderFreq(data) {
+  document.getElementById('m-total').textContent  = data.total.toLocaleString();
+  document.getElementById('m-unique').textContent = data.unique;
+  document.getElementById('m-size').textContent   = fmtSize(data.orig_bytes);
+
+  const sorted = Object.entries(data.freq).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  const maxF   = sorted[0][1];
+  const container = document.getElementById('freq-bars');
+
+  container.innerHTML = sorted.map(([ch, f]) => {
+    const w   = Math.round(f / maxF * 100);
+    const pct = (f / data.total * 100).toFixed(0);
+    const lbl = ch === ' ' ? '␣' : ch === '\n' ? '↵' : ch;
+    return `<div class="bar-row">
+      <span class="bar-char">${lbl}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:0%" data-w="${w}"></div></div>
+      <span class="bar-count">${f}次(${pct}%)</span>
+    </div>`;
+  }).join('');
+
+  // 触发动画
+  requestAnimationFrame(() =>
+    container.querySelectorAll('.bar-fill').forEach(el => el.style.width = el.dataset.w + '%')
+  );
+}
+
+// ── Panel 2：编码表 ────────────────────────────
+function renderCodes(data) {
+  const sorted = Object.entries(data.freq).sort((a, b) => b[1] - a[1]);
+  document.getElementById('code-tbody').innerHTML = sorted.map(([ch, f]) => {
+    const pct  = (f / data.total * 100).toFixed(1);
+    const code = data.codes[ch] || '';
+    const lbl  = ch === ' ' ? '<span style="opacity:.4">␣</span>'
+               : ch === '\n' ? '<span style="opacity:.4">↵</span>'
+               : ch;
+    return `<tr>
+      <td class="char-mono">${lbl}</td>
+      <td>${f}</td>
+      <td>${pct}%</td>
+      <td class="code-mono">${code}</td>
+      <td style="color:var(--ink3)">${code.length} bit</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Panel 3：压缩结果 ──────────────────────────
+function renderResult(data) {
+  document.getElementById('r-orig').textContent  = fmtSize(data.orig_bytes);
+  document.getElementById('r-comp').textContent  = fmtSize(data.comp_bytes);
+  document.getElementById('r-ratio').textContent = data.ratio + '%';
+  document.getElementById('r-avg').textContent   = data.avg_bits + ' bit/字符';
+
+  document.getElementById('bar-orig-num').textContent = fmtSize(data.orig_bytes);
+  document.getElementById('bar-comp-num').textContent = fmtSize(data.comp_bytes);
+
+  const pct = Math.max(4, Math.round(data.comp_bytes / data.orig_bytes * 100));
+  setTimeout(() => document.getElementById('bar-comp').style.width = pct + '%', 80);
+}
+</script>
+</body>
+</html>
