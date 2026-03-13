@@ -201,7 +201,7 @@
       <table>
         <thead>
           <tr>
-            <th>字符</th><th>频率</th><th>频率占比</th>
+            <th>字符</th><th>Unicode</th><th>频率</th><th>频率占比</th>
             <th>哈夫曼编码</th><th>编码长度</th>
           </tr>
         </thead>
@@ -384,22 +384,82 @@ function renderCodes(data) {
     const pct  = (f / data.total * 100).toFixed(1);
     const code = data.codes[ch] || '';
 
-    // 不可见字符 → 可视符号
+    // Unicode 码点，多码点字符（如 emoji）逐个列出
+    const unicode = [...ch].map(c =>
+      'U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')
+    ).join(' ');
+
+    // 不可见字符的具名标签
+    const NAMES = {
+  // C0 控制字符（U+0000–U+001F）
+  '\u0000': 'NUL',  '\u0001': 'SOH',  '\u0002': 'STX',  '\u0003': 'ETX',
+  '\u0004': 'EOT',  '\u0005': 'ENQ',  '\u0006': 'ACK',  '\u0007': 'BEL',
+  '\u0008': 'BS',   '\u0009': 'TAB',  '\u000a': 'LF',   '\u000b': 'VT',
+  '\u000c': 'FF',   '\u000d': 'CR',   '\u000e': 'SO',   '\u000f': 'SI',
+  '\u0010': 'DLE',  '\u0011': 'DC1',  '\u0012': 'DC2',  '\u0013': 'DC3',
+  '\u0014': 'DC4',  '\u0015': 'NAK',  '\u0016': 'SYN',  '\u0017': 'ETB',
+  '\u0018': 'CAN',  '\u0019': 'EM',   '\u001a': 'SUB',  '\u001b': 'ESC',
+  '\u001c': 'FS',   '\u001d': 'GS',   '\u001e': 'RS',   '\u001f': 'US',
+  '\u007f': 'DEL',
+
+  // C1 控制字符（U+0080–U+009F，极少见但存在）
+  '\u0080': 'PAD',  '\u0081': 'HOP',  '\u0082': 'BPH',  '\u0083': 'NBH',
+  '\u0084': 'IND',  '\u0085': 'NEL',  '\u0086': 'SSA',  '\u0087': 'ESA',
+  '\u0088': 'HTS',  '\u0089': 'HTJ',  '\u008a': 'VTS',  '\u008b': 'PLD',
+  '\u008c': 'PLU',  '\u008d': 'RI',   '\u008e': 'SS2',  '\u008f': 'SS3',
+  '\u0090': 'DCS',  '\u0091': 'PU1',  '\u0092': 'PU2',  '\u0093': 'STS',
+  '\u0094': 'CCH',  '\u0095': 'MW',   '\u0096': 'SPA',  '\u0097': 'EPA',
+  '\u0098': 'SOS',  '\u0099': 'SGC',  '\u009a': 'SCI',  '\u009b': 'CSI',
+  '\u009c': 'ST',   '\u009d': 'OSC',  '\u009e': 'PM',   '\u009f': 'APC',
+
+  // 各类空格字符
+  '\u0020': 'SP',    '\u00a0': 'NBSP',  '\u1680': 'OGSP', '\u2000': 'NQSP',
+  '\u2001': 'MQSP',  '\u2002': 'ENSP',  '\u2003': 'EMSP', '\u2004': '3/MSP',
+  '\u2005': '4/MSP', '\u2006': '6/MSP', '\u2007': 'FSP',  '\u2008': 'PSP',
+  '\u2009': 'THSP',  '\u200a': 'HSP',   '\u202f': 'NNBSP','\u205f': 'MMSP',
+  '\u3000': 'IDSP',
+
+  // 零宽与方向控制字符
+  '\u200b': 'ZWSP',  '\u200c': 'ZWNJ',  '\u200d': 'ZWJ',
+  '\u200e': 'LRM',   '\u200f': 'RLM',
+  '\u2028': 'LS',    '\u2029': 'PS',
+  '\u202a': 'LRE',   '\u202b': 'RLE',   '\u202c': 'PDF',
+  '\u202d': 'LRO',   '\u202e': 'RLO',
+  '\u2060': 'WJ',    '\u2061': 'FA',    '\u2062': 'IT',
+  '\u2063': 'IS',    '\u2064': 'IVS',
+  '\u206a': 'ISS',   '\u206b': 'ASS',   '\u206c': 'IAFS',
+  '\u206d': 'AAFS',  '\u206e': 'NADS',  '\u206f': 'NODS',
+
+  // Variation Selectors（变体选择符，让同一字符显示不同字形）
+  '\ufe00': 'VS1',   '\ufe01': 'VS2',   '\ufe02': 'VS3',  '\ufe03': 'VS4',
+  '\ufe04': 'VS5',   '\ufe05': 'VS6',   '\ufe06': 'VS7',  '\ufe07': 'VS8',
+  '\ufe08': 'VS9',   '\ufe09': 'VS10',  '\ufe0a': 'VS11', '\ufe0b': 'VS12',
+  '\ufe0c': 'VS13',  '\ufe0d': 'VS14',  '\ufe0e': 'VS15', '\ufe0f': 'VS16',
+
+  // 特殊用途
+  '\ufeff': 'BOM',   '\ufffc': 'OBJ',   '\ufffd': 'REPL',
+  '\ufffe': 'REPL2', '\uffff': 'REPL3',
+};
+    const name = NAMES[ch];
     const DISPLAY = {
-      ' ':      '␣',   // 半角空格
-      '\n':     '↵',   // Unix 换行
-      '\r':     '↵',   // Mac 旧换行
-      '\t':     '⇥',   // 制表符
-      '\u3000': '⬚',   // 全角空格
-      '\ufeff': 'BOM', // BOM 头
+      '\u0009': '⇥', '\u000a': '↵', '\u000d': '↵',
+      '\u001b': '␛', '\u0020': '␣', '\u3000': '⬚', '\ufeff': '⊘',
     };
     const symbol = DISPLAY[ch];
-    const lbl = symbol
-      ? `<span style="opacity:.5;font-size:.8em">${symbol}</span>`
-      : ch;
+
+    // 字符列：可打印字符直接显示，不可见字符显示具名标签或符号
+    const lbl = name
+      ? `<span style="font-family:'DM Sans',sans-serif;font-size:.7em;
+                      background:var(--paper3);padding:1px 5px;
+                      border-radius:4px;color:var(--ink2)">${name}</span>`
+      : symbol
+        ? `<span style="opacity:.5;font-size:.85em">${symbol}</span>`
+        : ch;
 
     return `<tr>
       <td class="char-mono">${lbl}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:.75rem;
+                 color:var(--ink3)">${unicode}</td>
       <td>${f}</td>
       <td>${pct}%</td>
       <td class="code-mono">${code}</td>
