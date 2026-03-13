@@ -100,3 +100,37 @@ def generate_codes(root: HuffmanNode) -> dict[str, str]:
     _traverse(root, "")
     return codes
  
+# ─────────────────────────────────────────────
+# 5. 比特串与字节流互转
+# ─────────────────────────────────────────────
+ 
+def _text_to_bitstring(text: str, codes: dict[str, str]) -> str:
+    """将文本转为 0/1 字符串。"""
+    return "".join(codes[ch] for ch in text)
+ 
+ 
+def _bitstring_to_bytes(bitstring: str) -> tuple[bytes, int]:
+    """
+    将 0/1 字符串打包为字节。
+    末尾不足 8 位时补 0，返回 (字节数据, padding位数)。
+    """
+    padding = (8 - len(bitstring) % 8) % 8
+    bitstring += "0" * padding
+ 
+    result = bytearray()
+    for i in range(0, len(bitstring), 8):
+        result.append(int(bitstring[i:i + 8], 2))
+ 
+    return bytes(result), padding
+ 
+ 
+def _bytes_to_bitstring(data: bytes, padding: int) -> str:
+    """
+    将字节流还原为 0/1 字符串，并去掉末尾补的 padding 位。
+    f'{b:08b}' 确保每个字节都补足前导零到 8 位。
+    """
+    bitstring = "".join(f"{b:08b}" for b in data)
+    if padding > 0:
+        bitstring = bitstring[:-padding]
+    return bitstring
+ 
