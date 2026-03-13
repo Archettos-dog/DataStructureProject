@@ -13,7 +13,12 @@ app.py — Flask 服务器
 
 import sys
 import os
+import chardet
 
+def read_text(path: str) -> str:
+    raw = open(path, 'rb').read()
+    enc = chardet.detect(raw)['encoding'] or 'utf-8'
+    return raw.decode(enc)
 # 保证 utils.py 可被直接 import（无论从哪个目录启动）
 sys.path.insert(0, os.path.dirname(__file__))
 
