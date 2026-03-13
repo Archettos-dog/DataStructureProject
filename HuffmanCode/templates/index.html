@@ -383,9 +383,21 @@ function renderCodes(data) {
   document.getElementById('code-tbody').innerHTML = sorted.map(([ch, f]) => {
     const pct  = (f / data.total * 100).toFixed(1);
     const code = data.codes[ch] || '';
-    const lbl  = ch === ' ' ? '<span style="opacity:.4">␣</span>'
-               : ch === '\n' ? '<span style="opacity:.4">↵</span>'
-               : ch;
+
+    // 不可见字符 → 可视符号
+    const DISPLAY = {
+      ' ':      '␣',   // 半角空格
+      '\n':     '↵',   // Unix 换行
+      '\r':     '↵',   // Mac 旧换行
+      '\t':     '⇥',   // 制表符
+      '\u3000': '⬚',   // 全角空格
+      '\ufeff': 'BOM', // BOM 头
+    };
+    const symbol = DISPLAY[ch];
+    const lbl = symbol
+      ? `<span style="opacity:.5;font-size:.8em">${symbol}</span>`
+      : ch;
+
     return `<tr>
       <td class="char-mono">${lbl}</td>
       <td>${f}</td>
