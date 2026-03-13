@@ -246,3 +246,18 @@ def decompress(input_path: str, output_path: str) -> dict:
         "char_count": len(text),
     }
  
+# ─────────────────────────────────────────────
+# 9. 辅助：打印编码表
+# ─────────────────────────────────────────────
+ 
+def print_code_table(codes: dict[str, str], freq_table: dict[str, int]) -> None:
+    """按频率从高到低打印编码表。"""
+    total = sum(freq_table.values())
+    sorted_items = sorted(freq_table.items(), key=lambda x: -x[1])
+ 
+    print(f"\n{'字符':<8} {'频率':<8} {'占比':<8} {'编码':<20} {'码长'}")
+    print("─" * 56)
+    for ch, freq in sorted_items:
+        label = repr(ch)           # 对空格、换行等特殊字符友好显示
+        code = codes.get(ch, "?")
+        print(f"{label:<8} {freq:<8} {freq/total*100:<7.2f}% {code:<20} {len(code)}")
