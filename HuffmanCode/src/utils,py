@@ -30,3 +30,17 @@ class HuffmanNode:
         oc = other.char if other.char is not None else "\uffff"
         return sc < oc
  
+# ─────────────────────────────────────────────
+# 2. 频率统计
+# ─────────────────────────────────────────────
+ 
+def build_frequency_table(text: str) -> dict[str, int]:
+    """
+    统计文本中每个字符的出现次数。
+    支持中文、英文、全角/半角标点及任意 Unicode 字符。
+    直接遍历 Python str（按 Unicode 码点），无需特殊处理。
+    """
+    if not text:
+        raise ValueError("输入文本不能为空")
+    return dict(Counter(text))
+ 
