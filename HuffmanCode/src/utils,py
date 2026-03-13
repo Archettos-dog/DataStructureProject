@@ -77,3 +77,26 @@ def build_huffman_tree(freq_table: dict[str, int]) -> HuffmanNode:
  
     return heap[0]
  
+# ─────────────────────────────────────────────
+# 4. 生成编码表
+# ─────────────────────────────────────────────
+ 
+def generate_codes(root: HuffmanNode) -> dict[str, str]:
+    """
+    前序遍历哈夫曼树，生成每个字符的二进制编码。
+    左分支为 '0'，右分支为 '1'。
+    """
+    codes: dict[str, str] = {}
+ 
+    def _traverse(node: HuffmanNode | None, path: str) -> None:
+        if node is None:
+            return
+        if node.char is not None:          # 叶节点
+            codes[node.char] = path or "0" # 根即叶时编码为 "0"
+            return
+        _traverse(node.left, path + "0")
+        _traverse(node.right, path + "1")
+ 
+    _traverse(root, "")
+    return codes
+ 
