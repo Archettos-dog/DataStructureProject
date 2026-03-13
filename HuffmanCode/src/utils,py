@@ -134,3 +134,115 @@ def _bytes_to_bitstring(data: bytes, padding: int) -> str:
         bitstring = bitstring[:-padding]
     return bitstring
  
+# ─────────────────────────────────────────────
+# 6. 解码
+# ─────────────────────────────────────────────
+ 
+def decode_bitstring(bitstring: str, root: HuffmanNode) -> str:
+    """
+    沿哈夫曼树逐位匹配，将 0/1 字符串还原为原始文本。
+    遇到叶节点即输出字符，然后返回根节点继续解码。
+    """
+    result = []
+    node = root
+    for bit in bitstring:
+        node = node.left if bit == "0" else node.right
+        if node is None:
+            raise ValueError("比特流与哈夫曼树不匹配，文件可能已损坏")
+        if node.char is not None:   # 到达叶节点
+            result.append(node.char)
+            node = root             # 回到根节点继续
+ 
+    return "".join(result)
+ 
+ 
+# ─────────────────────────────────────────────
+# 7. 压缩
+# ─────────────────────────────────────────────
+ 
+def compress(input_path: str, output_path: str) -> dict:
+    """
+    读取文本文件，执行哈夫曼压缩，写出 .huf 文件。
+ 
+    .huf 文件格式：
+        [pickle序列化的文件头] + [压缩字节流]
+    文件头字典包含：
+        freq_table : dict[str, int]  — 频率表（用于重建哈夫曼树）
+        padding    : int             — 末尾补零位数
+ 
+    返回包含统计信息的字典，供 main.py 展示。
+    """
+    # 读取原文
+    with open(input_path, "r", encoding="utf-8") as f:
+        text = f.read()
+ 
+    if not text:
+        raise ValueError(f"文件 {input_path} 内容为空，无法压缩")
+ 
+    # 构建树和编码表
+    freq_table = build_frequency_table(text)
+    root = build_huffman_tree(freq_table)
+    codes = generate_codes(root)
+ 
+    # 编码 → 字节流
+    bitstring = _text_to_bitstring(text, codes)
+    compressed_bytes, padding = _bitstring_to_bytes(bitstring)
+ 
+    # 写出文件
+    header = {"freq_table": freq_table, "padding": padding}
+    with open(output_path, "wb") as f:
+        pickle.dump(header, f)
+        f.write(compressed_bytes)
+ 
+    # 统计信息
+    import os
+    original_size = os.path.getsize(input_path)
+    compressed_size = os.path.getsize(output_path)
+    total_bits = sum(freq * len(codes[ch]) for ch, freq in freq_table.items())
+    avg_code_len = total_bits / len(text)
+ 
+    return {
+        "original_size": original_size,
+        "compressed_size": compressed_size,
+        "ratio": (1 - compressed_size / original_size) * 100,
+        "char_count": len(text),
+        "unique_chars": len(freq_table),
+        "avg_code_len": avg_code_len,
+        "codes": codes,
+        "freq_table": freq_table,
+    }
+ 
+ 
+# ─────────────────────────────────────────────
+# 8. 解压
+# ─────────────────────────────────────────────
+ 
+def decompress(input_path: str, output_path: str) -> dict:
+    """
+    读取 .huf 文件，执行哈夫曼解压，写出还原的文本文件。
+    返回包含统计信息的字典。
+    """
+    with open(input_path, "rb") as f:
+        header = pickle.load(f)
+        compressed_bytes = f.read()
+ 
+    freq_table: dict[str, int] = header["freq_table"]
+    padding: int = header["padding"]
+ 
+    # 重建哈夫曼树
+    root = build_huffman_tree(freq_table)
+ 
+    # 字节流 → 比特串 → 原文
+    bitstring = _bytes_to_bitstring(compressed_bytes, padding)
+    text = decode_bitstring(bitstring, root)
+ 
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(text)
+ 
+    import os
+    return {
+        "compressed_size": os.path.getsize(input_path),
+        "decompressed_size": os.path.getsize(output_path),
+        "char_count": len(text),
+    }
+ 
