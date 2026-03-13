@@ -40,6 +40,7 @@ def build_frequency_table(text: str) -> dict[str, int]:
     支持中文、英文、全角/半角标点及任意 Unicode 字符。
     直接遍历 Python str（按 Unicode 码点），无需特殊处理。
     """
+    text = text.replace('\r\n', '\n').replace('\r', '\n')  # 统一换行符
     if not text:
         raise ValueError("输入文本不能为空")
     return dict(Counter(text))
