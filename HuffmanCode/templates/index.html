@@ -19,6 +19,9 @@
   }
   body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
 
+  /* 居中容器 */
+  .page-wrap { max-width: 1060px; margin: 0 auto; }
+
   /* Header */
   header { padding: 2.5rem 3rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 1.5rem; }
   header h1 { font-family: 'Noto Serif SC', serif; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; }
@@ -31,7 +34,7 @@
   .step-btn.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 500; }
   .step-btn:not(:disabled):not(.active):hover { color: var(--ink2); }
 
-  main { padding: 2.5rem 3rem; max-width: 1000px; }
+  main { padding: 2.5rem 3rem; }
 
   /* Panel */
   .panel { display: none; animation: fadeUp .3s ease; }
@@ -118,18 +121,23 @@
 </head>
 <body>
 
+<div class="page-wrap">
 <header>
   <h1>哈夫曼编码</h1>
   <span>Huffman Coding · 可视化工具</span>
 </header>
+</div>
 
-<nav class="stepper">
+<div style="border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--paper); z-index: 10;">
+<nav class="stepper" style="border-bottom:none; max-width: 1060px; margin: 0 auto;">
   <button class="step-btn active" id="pill-0" onclick="goPanel(0)">1. 上传文件</button>
   <button class="step-btn" id="pill-1" onclick="goPanel(1)" disabled>2. 字符频率</button>
   <button class="step-btn" id="pill-2" onclick="goPanel(2)" disabled>3. 哈夫曼编码</button>
   <button class="step-btn" id="pill-3" onclick="goPanel(3)" disabled>4. 压缩结果</button>
 </nav>
+</div>
 
+<div class="page-wrap">
 <main>
 
   <!-- Panel 0：上传 -->
@@ -225,6 +233,7 @@
   </div>
 
 </main>
+</div>
 
 <script>
 // ── 示例文本 ──────────────────────────────────
