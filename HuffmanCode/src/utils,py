@@ -44,3 +44,36 @@ def build_frequency_table(text: str) -> dict[str, int]:
         raise ValueError("输入文本不能为空")
     return dict(Counter(text))
  
+# ─────────────────────────────────────────────
+# 3. 构建哈夫曼树
+# ─────────────────────────────────────────────
+ 
+def build_huffman_tree(freq_table: dict[str, int]) -> HuffmanNode:
+    """
+    用最小堆（优先队列）贪心构建哈夫曼树。
+    每次取出频率最小的两个节点合并，直到堆中只剩一个根节点。
+    特殊情况：只有一种字符时，根节点直接作为叶节点。
+    """
+    if not freq_table:
+        raise ValueError("频率表不能为空")
+ 
+    heap: list[HuffmanNode] = [HuffmanNode(ch, freq) for ch, freq in freq_table.items()]
+    heapq.heapify(heap)
+ 
+    # 只有一种字符：构造一个虚拟根，避免编码为空字符串
+    if len(heap) == 1:
+        only = heapq.heappop(heap)
+        root = HuffmanNode(None, only.freq)
+        root.left = only
+        return root
+ 
+    while len(heap) > 1:
+        left = heapq.heappop(heap)
+        right = heapq.heappop(heap)
+        merged = HuffmanNode(None, left.freq + right.freq)
+        merged.left = left
+        merged.right = right
+        heapq.heappush(heap, merged)
+ 
+    return heap[0]
+ 
