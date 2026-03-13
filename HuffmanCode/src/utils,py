@@ -1,0 +1,32 @@
+"""
+utils.py — 哈夫曼编码核心算法库
+包含：节点定义、频率统计、哈夫曼树构建、编码生成、压缩与解压
+"""
+ 
+import heapq
+import pickle
+from collections import Counter
+ 
+ 
+# ─────────────────────────────────────────────
+# 1. 哈夫曼树节点
+# ─────────────────────────────────────────────
+ 
+class HuffmanNode:
+    """哈夫曼树节点。叶节点存储字符，内部节点 char=None。"""
+ 
+    def __init__(self, char: str | None, freq: int):
+        self.char = char
+        self.freq = freq
+        self.left: "HuffmanNode | None" = None
+        self.right: "HuffmanNode | None" = None
+ 
+    # 优先队列按频率升序排列；频率相同时按字符排列，保证构建结果稳定
+    def __lt__(self, other: "HuffmanNode") -> bool:
+        if self.freq != other.freq:
+            return self.freq < other.freq
+        # 叶节点优先于内部节点，字符按字典序
+        sc = self.char if self.char is not None else "\uffff"
+        oc = other.char if other.char is not None else "\uffff"
+        return sc < oc
+ 
