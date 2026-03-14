@@ -229,8 +229,36 @@
       <div class="compare-track"><div class="compare-fill fill-green" id="bar-comp" style="width:0%"></div></div>
       <span class="compare-num" id="bar-comp-num">—</span>
     </div>
+      <!-- 压缩与解压操作区 -->
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin:1.25rem 0;">
+       <button class="btn-outline" id="btn-compress" onclick="doCompress()">
+        生成 .huf 文件
+       </button>
+       <button class="btn-outline" id="btn-download" onclick="doDownload()" disabled>
+        下载 .huf 文件
+       </button>
+       <button class="btn-outline" id="btn-decompress" onclick="doDecompress()" disabled>
+        解压还原原文
+       </button>
+    </div>
+
+      <!-- 解压结果展示 -->
+    <div id="decompress-result" style="display:none">
+    <div class="section-label" style="margin-top:1.25rem">还原结果</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+      <span id="decomp-match"
+          style="font-size:.8rem;padding:3px 10px;border-radius:20px"></span>
+      <button class="btn-outline" onclick="downloadRestored()">下载还原文本</button>
+    </div>
+    <pre id="decomp-text"
+       style="background:var(--paper2);border:1px solid var(--border);
+              border-radius:8px;padding:1rem 1.25rem;font-family:'JetBrains Mono',monospace;
+              font-size:.75rem;color:var(--ink2);line-height:1.8;
+              max-height:260px;overflow-y:auto;white-space:pre-wrap;
+              word-break:break-all"></pre>
+    </div>
     <div class="footnote">注：实际压缩文件还需存储编码表，整体大小会略有增加。算法由 Python utils.py 提供。</div>
-  </div>
+    </div>
 
 </main>
 </div>
@@ -273,6 +301,82 @@ function showError(msg) {
 
 function clearError() {
   document.getElementById('error-msg').classList.remove('show');
+}
+
+let currentToken = null;      // 记住本次压缩的 token
+let restoredText = '';        // 记住解压后的文本备下载用
+
+async function doCompress() {
+  if (!currentText) return;
+  const btn = document.getElementById('btn-compress');
+  btn.disabled = true;
+  btn.textContent = '压缩中…';
+
+  try {
+    const res  = await fetch('/api/compress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: currentText })
+    });
+    const data = await res.json();
+    if (!res.ok) { showError(data.error); return; }
+
+    currentToken = data.token;
+    document.getElementById('btn-download').disabled   = false;
+    document.getElementById('btn-decompress').disabled = false;
+    btn.textContent = '重新生成';
+  } catch (e) {
+    showError('压缩失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function doDownload() {
+  if (!currentToken) return;
+  window.location.href = `/api/download/${currentToken}`;
+}
+
+async function doDecompress() {
+  if (!currentToken) return;
+  const btn = document.getElementById('btn-decompress');
+  btn.disabled = true;
+  btn.textContent = '解压中…';
+
+  try {
+    const res  = await fetch(`/api/decompress/${currentToken}`);
+    const data = await res.json();
+    if (!res.ok) { showError(data.error); return; }
+
+    restoredText = data.text;
+
+    // 校验与原文是否一致
+    const match = restoredText === currentText;
+    const badge = document.getElementById('decomp-match');
+    badge.textContent    = match ? '✓ 与原文完全一致' : '✗ 与原文不一致';
+    badge.style.background = match ? '#e6f4ec' : '#fde8e4';
+    badge.style.color      = match ? 'var(--green)' : 'var(--accent)';
+
+    document.getElementById('decomp-text').textContent =
+      restoredText.slice(0, 1000) + (restoredText.length > 1000 ? '\n…（仅显示前1000字符）' : '');
+    document.getElementById('decompress-result').style.display = 'block';
+  } catch (e) {
+    showError('解压失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '解压还原原文';
+  }
+}
+
+function downloadRestored() {
+  if (!restoredText) return;
+  const blob = new Blob([restoredText], { type: 'text/plain;charset=utf-8' });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: 'restored.txt'
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 // ── 文件加载 ──────────────────────────────────

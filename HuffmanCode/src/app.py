@@ -96,6 +96,77 @@ def analyze():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
+import tempfile, uuid
+from flask import send_file
+from utils import compress, decompress
+
+# 用一个字典暂存 {token: huf文件路径}，服务器重启后清空
+_sessions: dict[str, str] = {}
+
+@app.route("/api/compress", methods=["POST"])
+def api_compress():
+    """
+    接收文本，写成临时 .txt，调用 utils.compress() 生成 .huf，
+    返回 { token, orig_bytes, comp_bytes, ratio, avg_bits }
+    前端凭 token 来下载或解压
+    """
+    data = request.get_json(force=True)
+    text: str = data.get("text", "")
+    if not text:
+        return jsonify({"error": "文本不能为空"}), 400
+
+    try:
+        tmp_dir  = tempfile.mkdtemp()
+        src_path = os.path.join(tmp_dir, "input.txt")
+        huf_path = os.path.join(tmp_dir, "output.huf")
+
+        with open(src_path, "w", encoding="utf-8") as f:
+            f.write(text)
+
+        stats = compress(src_path, huf_path)   # 调用 utils.py
+
+        token = uuid.uuid4().hex               # 唯一标识这次压缩
+        _sessions[token] = huf_path
+
+        return jsonify({
+            "token":      token,
+            "orig_bytes": stats["original_size"],
+            "comp_bytes": stats["compressed_size"],
+            "ratio":      round(stats["ratio"], 1),
+            "avg_bits":   round(stats["avg_code_len"], 2),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/download/<token>")
+def api_download(token):
+    """下载 .huf 文件"""
+    huf_path = _sessions.get(token)
+    if not huf_path or not os.path.exists(huf_path):
+        return jsonify({"error": "文件不存在或已过期"}), 404
+    return send_file(huf_path, as_attachment=True, download_name="compressed.huf")
+
+
+@app.route("/api/decompress/<token>")
+def api_decompress(token):
+    """解压 .huf，返回还原的文本"""
+    huf_path = _sessions.get(token)
+    if not huf_path or not os.path.exists(huf_path):
+        return jsonify({"error": "文件不存在或已过期，请重新压缩"}), 404
+
+    try:
+        tmp_dir  = os.path.dirname(huf_path)
+        out_path = os.path.join(tmp_dir, "restored.txt")
+
+        decompress(huf_path, out_path)         # 调用 utils.py
+
+        with open(out_path, "r", encoding="utf-8") as f:
+            restored = f.read()
+
+        return jsonify({"text": restored})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ── 启动 ──────────────────────────────────────
 if __name__ == "__main__":
