@@ -312,11 +312,14 @@ async function doCompress() {
   btn.disabled = true;
   btn.textContent = '压缩中…';
 
+  // 统一换行符再发送
+  const textToCompress = currentText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
   try {
-    const res  = await fetch('/api/compress', {
+    const res = await fetch('/api/compress', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: currentText })
+      body: JSON.stringify({ text: textToCompress })   
     });
     const data = await res.json();
     if (!res.ok) { showError(data.error); return; }
@@ -339,6 +342,7 @@ function doDownload() {
 
 async function doDecompress() {
   if (!currentToken) return;
+  
   const btn = document.getElementById('btn-decompress');
   btn.disabled = true;
   btn.textContent = '解压中…';
@@ -351,7 +355,8 @@ async function doDecompress() {
     restoredText = data.text;
 
     // 校验与原文是否一致
-    const match = restoredText === currentText;
+    const normalizedOriginal = currentText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const match = restoredText === normalizedOriginal;
     const badge = document.getElementById('decomp-match');
     badge.textContent    = match ? '✓ 与原文完全一致' : '✗ 与原文不一致';
     badge.style.background = match ? '#e6f4ec' : '#fde8e4';
@@ -420,6 +425,7 @@ function setFile(name, text) {
 // ── 调用 Python 后端 ──────────────────────────
 async function runAnalysis() {
   if (!currentText) return;
+  const textToAnalyze = currentText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   clearError();
   setLoading(true);
 
@@ -428,7 +434,7 @@ async function runAnalysis() {
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: currentText })
+      body: JSON.stringify({ text: textToAnalyze })   
     });
 
     const data = await res.json();
