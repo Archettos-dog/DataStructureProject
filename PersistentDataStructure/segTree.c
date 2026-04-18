@@ -63,3 +63,18 @@ int unique_ll(long long arr[], int len) {
     }
     return k;
 }
+
+/*
+ * lower_bound_ll: 在有序数组 arr[0..len-1] 中找 x 的第一个位置
+ * 返回 1-based 编号（即离散化编号）
+ * 例：b=[1,3,5,9], x=5 -> 返回 3
+ */
+int lower_bound_ll(long long arr[], int len, long long x) {
+    int l = 0, r = len - 1, ans = len;
+    while (l <= r) {
+        int mid = l + ((r - l) >> 1);
+        if (arr[mid] >= x) { ans = mid; r = mid - 1; }
+        else                 l = mid + 1;
+    }
+    return ans + 1;  /* +1 转为 1-based */
+}
