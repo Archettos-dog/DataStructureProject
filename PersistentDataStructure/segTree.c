@@ -132,3 +132,37 @@ int update(int pre, int l, int r, int pos) {
 
     return now;
 }
+
+/* ============================================================
+ * query_kth: 区间 [L, R] 第 k 小
+ *
+ * 利用前缀版本的差值：
+ *   (root[R] 的子树) - (root[L-1] 的子树)
+ *   等价于只含下标 [L, R] 内元素的权值线段树
+ *
+ * 在差值树上做权值线段树的经典二分：
+ *   - 左子树元素个数 cnt_left = sum[ls[rightRoot]] - sum[ls[leftRoot]]
+ *   - 若 k <= cnt_left，第 k 小在左半值域，递归左子
+ *   - 否则第 k 小在右半值域，递归右子，k 减去 cnt_left
+ *
+ * 参数：
+ *   leftRoot  — root[L-1]（左边界的前缀版本）
+ *   rightRoot — root[R]（右边界的前缀版本）
+ *   l, r      — 当前节点覆盖的值域区间
+ *   k         — 求第 k 小
+ *
+ * 返回：离散化编号（1-based），最后用 b[pos-1] 还原真实值
+ * ============================================================ */
+int query_kth(int leftRoot, int rightRoot, int l, int r, int k) {
+    if (l == r) return l;  /* 叶节点：当前值域只剩一个值，即为答案 */
+
+    int mid      = l + ((r - l) >> 1);
+    int cnt_left = sum[ls[rightRoot]] - sum[ls[leftRoot]]; /* 差值树左子元素数 */
+
+    if (k <= cnt_left)
+        /* 第 k 小在左半值域 */
+        return query_kth(ls[leftRoot], ls[rightRoot], l, mid, k);
+    else
+        /* 第 k 小在右半值域，从右半找第 (k - cnt_left) 小 */
+        return query_kth(rs[leftRoot], rs[rightRoot], mid + 1, r, k - cnt_left);
+}
