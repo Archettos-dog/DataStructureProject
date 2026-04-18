@@ -37,3 +37,17 @@ int sum[MAXNODE];    /* sum[u] = 节点 u 覆盖的值域区间内，已插入�
 int tot = 0;         /* 已分配节点总数（0 号节点为哨兵，从 1 开始分配） */
 
 int n, m;            /* n=数组长度，m=离散化后不同值的个数（值域大小） */
+
+/* ============================================================
+ * 工具函数：比较、去重、二分
+ * ============================================================ */
+
+/* qsort 的比较函数：按 long long 升序 */
+int cmp_ll(const void *x, const void *y) {
+    long long va = *(const long long *)x;
+    long long vb = *(const long long *)y;
+    if (va < vb) return -1;
+    if (va > vb) return  1;
+    return 0;
+}
+
