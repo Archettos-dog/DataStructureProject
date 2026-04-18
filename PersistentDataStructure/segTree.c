@@ -1,24 +1,39 @@
-#define MAXN    200005         
-#define MAXNODE (MAXN * 40)     
+#include <stdio.h>
+#include <stdlib.h>
 
-// 全局数组和变量
-int a[MAXN];        // 原数组
-int b[MAXN];        // 离散化用的辅助数组
-int root[MAXN];     // 每个前缀对应一棵树的根
-int ls[MAXNODE];    // 左孩子
-int rs[MAXNODE];    // 右孩子
-int sum[MAXNODE];   // 当前区间内数字出现次数
-int tot;            // 当前已经用了多少个节点
-int n, m;           // n 是数组长度，m 是去重后值域大小
+/* ============================================================
+ * 可持久化权值线段树（主席树）—— 区间第 k 小查询
+ *
+ * 核心思路：
+ *   1. 离散化：将原数组值域压缩到 [1, m]，节省空间
+ *   2. 权值线段树：维护"值域上每个值出现了几次"
+ *   3. 可持久化：对 a[1..n] 逐个插入，每次只复制被修改的
+ *      路径（O(log m) 个新节点），其余节点与旧版本共享
+ *   4. 区间查询：root[R] - root[L-1] 的差值树等价于
+ *      只统计下标 [L,R] 内元素的权值线段树，再在其上二分
+ *
+ * 时间复杂度：建树 O(n log m)，单次查询 O(log m)
+ * 空间复杂度：O(n log m)（每个版本新增 O(log m) 节点）
+ * ============================================================ */
 
-// 1. 离散化
-void discretize();
+#define MAXN    200005          /* 数组最大长度 */
+#define MAXNODE (MAXN * 40)     /* 节点池大小：每次插入最多新建 log(MAXN)≈18 个节点
+                                   留 40 倍余量足够 */
 
-// 2. 插入一个数，生成新版本
-int update(int pre, int l, int r, int x);
+/* ---------- 原数组与离散化 ---------- */
+long long a[MAXN];   /* 原始输入数组（1-indexed） */
+long long b[MAXN];   /* 离散化辅助数组：存排序后的去重值 */
+int       id[MAXN];  /* id[i] = a[i] 在离散化数组 b 中的 1-based 编号 */
 
-// 3. 查询区间 [l, r] 中第 k 小
-int query_kth(int leftRoot, int rightRoot, int l, int r, int k);
+/* ---------- 主席树节点池 ---------- */
+/*
+ * 所有版本的节点共用一个静态池，用 tot 计数已分配节点数。
+ * 节点 0 是哨兵节点（ls=rs=sum=0），代表空树，永远不修改它。
+ */
+int root[MAXN];      /* root[i] = 前 i 个元素构成的版本的根节点编号 */
+int ls[MAXNODE];     /* ls[u] = 节点 u 的左子节点编号 */
+int rs[MAXNODE];     /* rs[u] = 节点 u 的右子节点编号 */
+int sum[MAXNODE];    /* sum[u] = 节点 u 覆盖的值域区间内，已插入元素的总数 */
+int tot = 0;         /* 已分配节点总数（0 号节点为哨兵，从 1 开始分配） */
 
-// 4. 主函数
-int main();
+int n, m;            /* n=数组长度，m=离散化后不同值的个数（值域大小） */
