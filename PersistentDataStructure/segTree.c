@@ -196,7 +196,7 @@ void print_version_tree(int n) {
                    i, r, sum[r], ls[r], rs[r]);
         }
     }
-    printf("  （共分配节点数 tot = %d，每版本新增约 log₂(%d)≈%d 个节点）\n\n",
+    printf("  （共分配节点数 tot = %d,每版本新增约 log2(%d)≈%d 个节点）\n\n",
            tot, m, /* 粗略估算 log */ 
            /* 手动计算 log2 避免引入 math.h */
            m > 0 ? (m > 1 ? (m > 3 ? (m > 7 ? (m > 15 ? 5 : 4) : 3) : 2) : 1) : 0);
