@@ -201,3 +201,52 @@ void print_version_tree(int n) {
            /* 手动计算 log2 避免引入 math.h */
            m > 0 ? (m > 1 ? (m > 3 ? (m > 7 ? (m > 15 ? 5 : 4) : 3) : 2) : 1) : 0);
 }
+
+/* ============================================================
+ * 主函数
+ * ============================================================ */
+int main() {
+    int q;
+
+    /* 读入数组 */
+    scanf("%d", &n);
+    for (int i = 1; i <= n; i++)
+        scanf("%lld", &a[i]);
+
+    /* 第一步：离散化 */
+    discretize();
+
+    /* 第二步：建前缀版本树
+     * root[0] = 0（哨兵空版本）
+     * root[i] = 在 root[i-1] 基础上插入 id[i]（a[i] 的离散编号）
+     */
+    root[0] = 0;
+    for (int i = 1; i <= n; i++)
+        root[i] = update(root[i - 1], 1, m, id[i]);
+
+    /* 打印版本树结构（便于验收展示） */
+    print_version_tree(n);
+
+    /* 第三步：回答查询 */
+    scanf("%d", &q);
+    printf("──────── 查询结果 ────────\n");
+
+    while (q--) {
+        int l, r, k;
+        scanf("%d %d %d", &l, &r, &k);
+
+        /* 合法性检查：k 不能超过区间内元素个数 */
+        int cnt = sum[root[r]] - sum[root[l - 1]];
+        if (k < 1 || k > cnt) {
+            printf("查询 [%d,%d] 第%d小：k 越界（区间共%d个元素）\n",
+                   l, r, k, cnt);
+            continue;
+        }
+
+        /* 查询离散编号，再还原真实值 */
+        int pos = query_kth(root[l - 1], root[r], 1, m, k);
+        printf("区间[%d,%d]的第%d小 = %lld\n", l, r, k, b[pos - 1]);
+    }
+
+    return 0;
+}
