@@ -96,3 +96,39 @@ void discretize() {
     for (int i = 1; i <= n; i++)
         id[i] = lower_bound_ll(b, m, a[i]);
 }
+
+/* ============================================================
+ * update: 可持久化插入
+ *
+ * 含义：在旧版本 pre 的基础上，把值域位置 pos 的计数 +1，
+ *       返回新版本的根节点编号。
+ *
+ * 参数：
+ *   pre   — 旧版本根节点
+ *   l, r  — 当前节点覆盖的值域区间
+ *   pos   — 要插入的离散化编号（1-based）
+ *
+ * 实现：
+ *   - 先 ++tot 分配一个新节点
+ *   - 复制旧节点的 ls/rs（路径外的子树完全共享）
+ *   - sum 加 1（从根到叶都要加）
+ *   - 递归到 pos 所在的半边，只更新那一侧，另一侧继续共享
+ * ============================================================ */
+int update(int pre, int l, int r, int pos) {
+    int now = ++tot;          /* 分配新节点，编号为 now */
+    ls[now]  = ls[pre];       /* 默认继承旧节点的左右子指针 */
+    rs[now]  = rs[pre];
+    sum[now] = sum[pre] + 1;  /* 该节点覆盖的区间内多了一个元素 */
+
+    if (l == r) return now;   /* 叶节点：直接返回，无需继续递归 */
+
+    int mid = l + ((r - l) >> 1);
+    if (pos <= mid)
+        /* pos 在左半段：递归更新左子，右子继续共享旧版本 */
+        ls[now] = update(ls[pre], l, mid, pos);
+    else
+        /* pos 在右半段：递归更新右子，左子继续共享旧版本 */
+        rs[now] = update(rs[pre], mid + 1, r, pos);
+
+    return now;
+}
