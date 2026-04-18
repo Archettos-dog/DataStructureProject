@@ -51,3 +51,15 @@ int cmp_ll(const void *x, const void *y) {
     return 0;
 }
 
+/*
+ * unique_ll: 对已排序数组原地去重，返回去重后长度
+ * 例：[1,1,3,5,5] -> [1,3,5]，返回 3
+ */
+int unique_ll(long long arr[], int len) {
+    int k = 0;
+    for (int i = 0; i < len; i++) {
+        if (i == 0 || arr[i] != arr[i - 1])
+            arr[k++] = arr[i];
+    }
+    return k;
+}
