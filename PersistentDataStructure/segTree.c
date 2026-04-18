@@ -166,3 +166,38 @@ int query_kth(int leftRoot, int rightRoot, int l, int r, int k) {
         /* 第 k 小在右半值域，从右半找第 (k - cnt_left) 小 */
         return query_kth(rs[leftRoot], rs[rightRoot], mid + 1, r, k - cnt_left);
 }
+
+/* ============================================================
+ * print_version_tree: 打印简化版版本树结构（用于验收展示）
+ *
+ * 输出格式示例（n=3）：
+ *   ── 版本树（简化）──
+ *   root[0] = 0  sum=0  (空版本)
+ *   root[1] = 1  sum=1  ls=2 rs=0
+ *   root[2] = 4  sum=2  ls=5 rs=0
+ *   root[3] = 7  sum=3  ls=8 rs=0
+ *
+ * 展示内容：每个版本的根节点编号、该版本覆盖的元素总数、
+ *           根节点的左右子编号（体现路径复制后的结构）
+ * ============================================================ */
+void print_version_tree(int n) {
+    printf("\n──────── 版本树（简化展示）────────\n");
+    printf("  %-8s %-10s %-8s %-8s %-8s\n",
+           "版本", "根节点编号", "元素总数", "左子节点", "右子节点");
+    printf("  %s\n", "─────────────────────────────────────────");
+
+    for (int i = 0; i <= n; i++) {
+        int r = root[i];
+        if (i == 0) {
+            printf("  root[%d] = %-5d sum=%-4d （空版本，哨兵节点）\n",
+                   i, r, sum[r]);
+        } else {
+            printf("  root[%d] = %-5d sum=%-4d ls=%-5d rs=%-5d\n",
+                   i, r, sum[r], ls[r], rs[r]);
+        }
+    }
+    printf("  （共分配节点数 tot = %d，每版本新增约 log₂(%d)≈%d 个节点）\n\n",
+           tot, m, /* 粗略估算 log */ 
+           /* 手动计算 log2 避免引入 math.h */
+           m > 0 ? (m > 1 ? (m > 3 ? (m > 7 ? (m > 15 ? 5 : 4) : 3) : 2) : 1) : 0);
+}
