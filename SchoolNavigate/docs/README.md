@@ -1,0 +1,1 @@
+doc文件包含GIF动图，需用Microsoft Word打开
