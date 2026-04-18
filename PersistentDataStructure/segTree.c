@@ -78,3 +78,21 @@ int lower_bound_ll(long long arr[], int len, long long x) {
     }
     return ans + 1;  /* +1 转为 1-based */
 }
+
+/* ============================================================
+ * 离散化
+ * 将原数组 a[1..n] 的值域压缩到 [1, m]
+ * 步骤：复制->排序->去重->逐元素查编号
+ * ============================================================ */
+void discretize() {
+    /* 将 a[1..n] 复制到 b[0..n-1]（b 从 0 开始，方便 qsort） */
+    for (int i = 1; i <= n; i++)
+        b[i - 1] = a[i];
+
+    qsort(b, n, sizeof(long long), cmp_ll);
+    m = unique_ll(b, n);  /* m = 不同值的个数，也是值域大小 */
+
+    /* 查每个 a[i] 对应的离散编号，存入 id[i] */
+    for (int i = 1; i <= n; i++)
+        id[i] = lower_bound_ll(b, m, a[i]);
+}
