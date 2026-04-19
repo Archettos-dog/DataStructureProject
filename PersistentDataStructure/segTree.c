@@ -178,6 +178,28 @@ int query_kth(int leftRoot, int rightRoot, int l, int r, int k) {
         return query_kth(rs1[leftRoot], rs1[rightRoot], mid + 1, r, k - cnt_left);
 }
 
+/*
+ * update2: 在旧版本 pre 基础上，位置 pos 的活跃标记加 delta
+ * delta = +1（新增标记）或 -1（删除旧标记）
+ * 返回新版本根节点编号
+ *
+ * 注意：与 update1 唯一的区别是 delta 可以是 -1
+ *       路径复制的逻辑完全相同
+ */
+int update2(int pre, int l, int r, int pos, int delta) {
+    int now = ++tot2;
+    ls2[now]  = ls2[pre];
+    rs2[now]  = rs2[pre];
+    sum2[now] = sum2[pre] + delta;  /* 加 delta 而非固定 +1 */
+    if (l == r) return now;
+    int mid = l + ((r - l) >> 1);
+    if (pos <= mid)
+        ls2[now] = update2(ls2[pre], l, mid, pos, delta);
+    else
+        rs2[now] = update2(rs2[pre], mid + 1, r, pos, delta);
+    return now;
+}
+
 /* ============================================================
  * print_version_tree: 打印简化版版本树结构（用于验收展示）
  *
