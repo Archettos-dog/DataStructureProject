@@ -200,6 +200,23 @@ int update2(int pre, int l, int r, int pos, int delta) {
     return now;
 }
 
+/*
+ * query_distinct: 在版本 node 上，查询位置区间 [ql,qr] 内活跃标记总数
+ *
+ * 只需传入 root2[R]（单棵树），不做差值。
+ * 原因：root2[R] 已经记录了"处理到位置R时，每种值最后出现在哪里"，
+ *       直接统计 [L,R] 内的活跃位置数即可。
+ */
+int query_distinct(int node, int l, int r, int ql, int qr) {
+    if (ql <= l && r <= qr)       /* 当前区间完全在查询范围内，直接返回 */
+        return sum2[node];
+    int mid = l + ((r - l) >> 1);
+    int res = 0;
+    if (ql <= mid) res += query_distinct(ls2[node], l, mid, ql, qr);
+    if (qr >  mid) res += query_distinct(rs2[node], mid + 1, r, ql, qr);
+    return res;
+}
+
 /* ============================================================
  * print_version_tree: 打印简化版版本树结构（用于验收展示）
  *
