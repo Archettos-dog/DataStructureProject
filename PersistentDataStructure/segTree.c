@@ -242,7 +242,10 @@ void print_version_tree() {
  * 主函数
  * ============================================================ */
 int main() {
-    int q;
+    /* Windows 控制台输出 UTF-8（如乱码可注释掉这两行） */
+#ifdef _WIN32
+    system("chcp 65001 > nul");
+#endif
 
     /* 读入数组 */
     scanf("%d", &n);
@@ -252,36 +255,61 @@ int main() {
     /* 第一步：离散化 */
     discretize();
 
-    /* 第二步：建前缀版本树
-     * root[0] = 0（哨兵空版本）
-     * root[i] = 在 root[i-1] 基础上插入 id[i]（a[i] 的离散编号）
-     */
-    root[0] = 0;
-    for (int i = 1; i <= n; i++)
-        root[i] = update(root[i - 1], 1, m, id[i]);
+    /* 第二步：同时建两棵可持久化线段树 */
+    root1[0] = 0;
+    root2[0] = 0;
+    memset(prev_occ, 0, sizeof(prev_occ)); /* 初始所有值未出现 */
 
-    /* 打印版本树结构（便于验收展示） */
-    print_version_tree(n);
+    for (int i = 1; i <= n; i++) {
+        /* 树1：在旧版本基础上插入 id[i]（值域位置 +1） */
+        root1[i] = update1(root1[i - 1], 1, m, id[i]);
+
+        /*
+         * 树2：更新"最后出现位置"标记
+         *   若 id[i] 之前出现过（prev_occ[id[i]] != 0），
+         *   先把旧位置的标记 -1（删除），再在当前位置 i 标记 +1（新增）
+         *   若首次出现，直接在位置 i 标记 +1
+         */
+        if (prev_occ[id[i]] != 0) {
+            /* 两次 update 串联：先删旧，再加新 */
+            int tmp  = update2(root2[i - 1], 1, n, prev_occ[id[i]], -1);
+            root2[i] = update2(tmp,           1, n, i,                +1);
+        } else {
+            root2[i] = update2(root2[i - 1], 1, n, i, +1);
+        }
+        prev_occ[id[i]] = i; /* 记录 id[i] 最新出现的位置 */
+    }
+
+    /* 展示版本树 */
+    print_version_tree();
 
     /* 第三步：回答查询 */
+    int q;
     scanf("%d", &q);
-    printf("──────── 查询结果 ────────\n");
+    printf("-------- 查询结果 --------\n");
 
     while (q--) {
-        int l, r, k;
-        scanf("%d %d %d", &l, &r, &k);
+        int type, l, r;
+        scanf("%d %d %d", &type, &l, &r);
 
-        /* 合法性检查：k 不能超过区间内元素个数 */
-        int cnt = sum[root[r]] - sum[root[l - 1]];
-        if (k < 1 || k > cnt) {
-            printf("查询 [%d,%d] 第%d小：k 越界（区间共%d个元素）\n",
-                   l, r, k, cnt);
-            continue;
+        if (type == 1) {
+            /* 功能1：区间第 k 小 */
+            int k;
+            scanf("%d", &k);
+            int cnt = sum1[root1[r]] - sum1[root1[l - 1]];
+            if (k < 1 || k > cnt) {
+                printf("查询1 [%d,%d] 第%d小：k 越界（区间共%d个元素）\n",
+                       l, r, k, cnt);
+                continue;
+            }
+            int pos = query_kth(root1[l - 1], root1[r], 1, m, k);
+            printf("查询1: 区间[%d,%d] 第%d小 = %lld\n", l, r, k, b[pos - 1]);
+
+        } else {
+            /* 功能2：区间不同元素个数 */
+            int ans = query_distinct(root2[r], 1, n, l, r);
+            printf("查询2: 区间[%d,%d] 不同元素个数 = %d\n", l, r, ans);
         }
-
-        /* 查询离散编号，再还原真实值 */
-        int pos = query_kth(root[l - 1], root[r], 1, m, k);
-        printf("区间[%d,%d]的第%d小 = %lld\n", l, r, k, b[pos - 1]);
     }
 
     return 0;
