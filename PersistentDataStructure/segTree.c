@@ -171,7 +171,7 @@ int update1(int pre, int l, int r, int pos) {
 int query_kth(int leftRoot, int rightRoot, int l, int r, int k) {
     if (l == r) return l;
     int mid      = l + ((r - l) >> 1);
-    int cnt_left = sum1[ls1[rightRoot]] - sum1[ls1[leftRoot]];
+    int cnt_left = sum1[ls1[rightRoot]] - sum1[ls1[leftRoot]];  //计算区间 [l, r] 里左半边的个数
     if (k <= cnt_left)
         return query_kth(ls1[leftRoot], ls1[rightRoot], l, mid, k);
     else
@@ -242,7 +242,7 @@ void print_version_tree() {
  * 主函数
  * ============================================================ */
 int main() {
-    /* Windows 控制台输出 UTF-8（如乱码可注释掉这两行） */
+    /* Windows 控制台输出 UTF-8 */
 //#ifdef _WIN32
 //    system("chcp 65001 > nul");
 //#endif
