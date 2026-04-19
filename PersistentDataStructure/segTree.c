@@ -169,17 +169,13 @@ int update1(int pre, int l, int r, int pos) {
  * 返回：离散化编号（1-based），最后用 b[pos-1] 还原真实值
  * ============================================================ */
 int query_kth(int leftRoot, int rightRoot, int l, int r, int k) {
-    if (l == r) return l;  /* 叶节点：当前值域只剩一个值，即为答案 */
-
+    if (l == r) return l;
     int mid      = l + ((r - l) >> 1);
-    int cnt_left = sum[ls[rightRoot]] - sum[ls[leftRoot]]; /* 差值树左子元素数 */
-
+    int cnt_left = sum1[ls1[rightRoot]] - sum1[ls1[leftRoot]];
     if (k <= cnt_left)
-        /* 第 k 小在左半值域 */
-        return query_kth(ls[leftRoot], ls[rightRoot], l, mid, k);
+        return query_kth(ls1[leftRoot], ls1[rightRoot], l, mid, k);
     else
-        /* 第 k 小在右半值域，从右半找第 (k - cnt_left) 小 */
-        return query_kth(rs[leftRoot], rs[rightRoot], mid + 1, r, k - cnt_left);
+        return query_kth(rs1[leftRoot], rs1[rightRoot], mid + 1, r, k - cnt_left);
 }
 
 /* ============================================================
