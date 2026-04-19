@@ -221,21 +221,21 @@ int query_distinct(int node, int l, int r, int ql, int qr) {
  * 版本树展示（同时展示两棵树）
  * ============================================================ */
 void print_version_tree() {
-    printf("\n-------- 版本树（简化展示）--------\n");
-    printf("  %-6s  %-12s %-8s    %-12s %-8s\n",
-           "版本", "树1根(kth)", "元素数", "树2根(distinct)", "活跃数");
-    printf("  %-6s  %-12s %-8s    %-12s %-8s\n",
+    printf("\n-------- Version Tree --------\n");
+    printf("  %-6s  %-12s %-8s    %-13s %-8s\n",
+           "Ver", "Tree1 root", "count", "Tree2 root", "active");
+    printf("  %-6s  %-12s %-8s    %-13s %-8s\n",
            "------", "----------", "------", "-------------", "------");
 
     for (int i = 0; i <= n; i++) {
         int r1 = root1[i], r2 = root2[i];
         printf("  [%2d]    %-12d %-8d    %-13d %-8d",
                i, r1, sum1[r1], r2, sum2[r2]);
-        if (i == 0) printf("  <- 空版本");
-        else        printf("  <- 插入 a[%d]=%lld", i, a[i]);
+        if (i == 0) printf("  <- empty version");
+        else        printf("  <- insert a[%d]=%lld", i, a[i]);
         printf("\n");
     }
-    printf("  (树1共分配节点 tot1=%d，树2共分配节点 tot2=%d)\n\n", tot1, tot2);
+    printf("  (tree1 tot=%d, tree2 tot=%d)\n\n", tot1, tot2);
 }
 
 /* ============================================================
@@ -243,9 +243,9 @@ void print_version_tree() {
  * ============================================================ */
 int main() {
     /* Windows 控制台输出 UTF-8（如乱码可注释掉这两行） */
-#ifdef _WIN32
-    system("chcp 65001 > nul");
-#endif
+//#ifdef _WIN32
+//    system("chcp 65001 > nul");
+//#endif
 
     /* 读入数组 */
     scanf("%d", &n);
@@ -286,29 +286,27 @@ int main() {
     /* 第三步：回答查询 */
     int q;
     scanf("%d", &q);
-    printf("-------- 查询结果 --------\n");
+    printf("-------- Query Results --------\n");
 
     while (q--) {
         int type, l, r;
         scanf("%d %d %d", &type, &l, &r);
 
         if (type == 1) {
-            /* 功能1：区间第 k 小 */
             int k;
             scanf("%d", &k);
             int cnt = sum1[root1[r]] - sum1[root1[l - 1]];
             if (k < 1 || k > cnt) {
-                printf("查询1 [%d,%d] 第%d小：k 越界（区间共%d个元素）\n",
+                printf("Query1 [%d,%d] k=%d: out of range (size=%d)\n",
                        l, r, k, cnt);
                 continue;
             }
             int pos = query_kth(root1[l - 1], root1[r], 1, m, k);
-            printf("查询1: 区间[%d,%d] 第%d小 = %lld\n", l, r, k, b[pos - 1]);
+            printf("Query1: [%d,%d] kth(%d) = %lld\n", l, r, k, b[pos - 1]);
 
         } else {
-            /* 功能2：区间不同元素个数 */
             int ans = query_distinct(root2[r], 1, n, l, r);
-            printf("查询2: 区间[%d,%d] 不同元素个数 = %d\n", l, r, ans);
+            printf("Query2: [%d,%d] distinct count = %d\n", l, r, ans);
         }
     }
 
