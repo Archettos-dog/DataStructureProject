@@ -267,11 +267,24 @@ int main() {
         fprintf(stderr, "Error: invalid n\n");
         return 1;
     }
+    {
+    int ch = getchar();
+    if (ch != '\n' && ch != ' ' && ch != '\r' && ch != EOF) {
+        fprintf(stderr, "Error: invalid input for n (unexpected char '%c')\n", ch);
+        return 1;
+    }
+    // 若读到的是空格，说明还有后续内容在同一行，属于正常情况，不报错
+    }
     for (int i = 1; i <= n; i++) {
-        if (scanf("%lld", &a[i]) != 1) {
-            fprintf(stderr, "Error: failed to read a[%d]\n", i);
-            return 1;
-        }
+    if (scanf("%lld", &a[i]) != 1) {
+        fprintf(stderr, "Error: failed to read a[%d] (non-numeric input)\n", i);
+        return 1;
+         }
+    // 新增：检查元素是否在合法范围内（long long 安全范围）
+    if (a[i] < -1000000000LL || a[i] > 1000000000LL) {
+        fprintf(stderr, "Error: a[%d]=%lld out of range [-1e9, 1e9]\n", i, a[i]);
+        return 1;
+         }
     }
 
     /* 第一步：离散化 */
@@ -305,9 +318,9 @@ int main() {
 
     /* 第三步：回答查询 */
     int q;
-    if (scanf("%d", &q) != 1 || q <= 0) {
-        fprintf(stderr, "Error: invalid q\n");
-        return 1;
+    if (scanf("%d", &q) != 1 || q < 0) {
+    fprintf(stderr, "Error: invalid q\n");
+    return 1;
     }
 
     printf("-------- Query Results --------\n");
@@ -365,6 +378,11 @@ int main() {
                 fprintf(stderr, "Error: failed to read v\n");
                 return 1;
             }
+            if (v < -1000000000LL || v > 1000000000LL) {
+               printf("Query4: [%d,%d] count(%lld) = 0 (value out of range)\n",
+                     l, r, v);
+               continue;
+             }
             /* 检查 v 是否在离散化表中（即是否在原数组中出现过） */
             int pos = lower_bound_ll(b, m, v);
             if (pos < 1 || pos > m || b[pos - 1] != v) {
